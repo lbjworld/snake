@@ -3,7 +3,6 @@ import importlib
 from datetime import datetime
 import pandas as pd
 import pandas_datareader as pdr
-import matplotlib.pyplot as plt
 
 from backtest import Portfolio
 
@@ -86,6 +85,7 @@ def run_backtest(
         return target_class
     # get data from yahoo
     bars = pdr.get_data_yahoo(symbol, start=date_range[0], end=date_range[1])
+    print 'stock bars: ', bars.head(10)
     # create strategy class and get signals
     strategy_class = import_class_by_name(strategy)
     strategy_inst = strategy_class(symbol, bars)

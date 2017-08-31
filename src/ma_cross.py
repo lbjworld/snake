@@ -13,8 +13,10 @@ class MovingAverageCrossStrategy(Strategy):
     short_window - Lookback period for short moving average.
     long_window - Lookback period for long moving average."""
 
-    def __init__(self, symbol, bars, short_window=100, long_window=400):
+    def __init__(self, symbol, bars, short_window=40, long_window=100):
         self.symbol = symbol
+        if bars.shape[0] < long_window:
+            raise Exception('bars too short to apply MAC')
         self.bars = bars
 
         self.short_window = short_window
@@ -28,17 +30,16 @@ class MovingAverageCrossStrategy(Strategy):
 
         # Create the set of short and long simple moving averages over the
         # respective periods
-        signals['short_mavg'] = pd.rolling_mean(
-            self.bars['Close'], self.short_window, min_periods=1)
-        signals['long_mavg'] = pd.rolling_mean(
-            self.bars['Close'], self.long_window, min_periods=1)
+        signals['short_mavg'] = self.bars['Adj Close'].rolling(
+            window=self.short_window, min_periods=1, center=False).mean()
+        signals['long_mavg'] = self.bars['Adj Close'].rolling(
+            window=self.long_window, min_periods=1, center=False).mean()
 
         # Create a 'signal' (invested or not invested) when the short moving average crosses
         # the long moving average, but only for the period greater than the shortest moving
         # average window
         signals['signal'][self.short_window:] = np.where(
-            signals['short_mavg'][self.short_window:] > signals['long_mavg'][self.short_window:],
-            1.0, 0.0
+            signals['short_mavg'][self.short_window:] > signals['long_mavg'][self.short_window:], 1.0, 0.0
         )
 
         # Take the difference of the signals in order to generate actual trading orders
