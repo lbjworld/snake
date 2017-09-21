@@ -1,8 +1,5 @@
 # coding: utf-8
-import importlib
-from datetime import datetime
 import pandas as pd
-import pandas_datareader as pdr
 
 from backtest import Portfolio
 
@@ -23,11 +20,12 @@ class MarketOnTickerPortfolio(Portfolio):
 
     TICKER_KEY = None
 
-    def __init__(self, symbol, bars, signals, initial_capital=100000.0):
+    def __init__(self, symbol, bars, signals, initial_capital=100000.0, shares_per_position=100):
         self.symbol = symbol
         self.bars = bars
         self.signals = signals
         self.initial_capital = float(initial_capital)
+        self.shares_per_position = int(shares_per_position)
         self.positions = self.generate_positions()
 
     def generate_positions(self):
@@ -35,7 +33,7 @@ class MarketOnTickerPortfolio(Portfolio):
         100 of the particular symbol based on the forecast signals of
         {1, 0, -1} from the signals DataFrame."""
         positions = pd.DataFrame(index=self.signals.index).fillna(0.0)
-        positions[self.symbol] = 1000 * self.signals['signal']
+        positions[self.symbol] = self.shares_per_position * self.signals['signal']
         return positions
 
     def backtest_portfolio(self):
@@ -58,8 +56,12 @@ class MarketOnTickerPortfolio(Portfolio):
         # Create the 'holdings' and 'cash' series by running through
         # the trades and adding/subtracting the relevant quantity from
         # each column
-        portfolio['holdings'] = (self.positions.multiply(self.bars[self.TICKER_KEY], axis='index')).sum(axis=1)
-        portfolio['cash'] = self.initial_capital - (pos_diff.multiply(self.bars[self.TICKER_KEY], axis='index')).sum(axis=1).cumsum(axis=0)
+        portfolio['holdings'] = (
+            self.positions.multiply(self.bars[self.TICKER_KEY], axis='index')
+        ).sum(axis=1)
+        portfolio['cash'] = self.initial_capital - (
+            pos_diff.multiply(self.bars[self.TICKER_KEY], axis='index')
+        ).sum(axis=1).cumsum(axis=0)
 
         # Finalise the total and bar-based returns based on the 'cash'
         # and 'holdings' figures for the portfolio
@@ -74,27 +76,3 @@ class MarketOnOpenPortfolio(MarketOnTickerPortfolio):
 
 class MarketOnClosePortfolio(MarketOnTickerPortfolio):
     TICKER_KEY = 'Adj Close'
-
-
-def run_backtest(
-        symbol, strategy, portfolio, date_range=(datetime(2015, 8, 29), datetime.now())):
-    def import_class_by_name(path_name):
-        rs = path_name.split('.')
-        module_path, class_name = '.'.join(rs[:-1]), rs[-1]
-        target_class = getattr(importlib.import_module(module_path), class_name)
-        return target_class
-    # get data from yahoo
-    bars = pdr.get_data_yahoo(symbol, start=date_range[0], end=date_range[1])
-    print 'stock bars: ', bars.head(10)
-    # create strategy class and get signals
-    strategy_class = import_class_by_name(strategy)
-    strategy_inst = strategy_class(symbol, bars)
-    signals = strategy_inst.generate_signals()
-    # create a portfolio
-    portfolio_class = import_class_by_name(portfolio)
-    portfolio_inst = portfolio_class(symbol, bars, signals, initial_capital=100000.0)
-    returns = portfolio_inst.backtest_portfolio()
-
-    print 'head returns:', returns.head(10)
-    print 'tail returns:', returns.tail(10)
-    return returns

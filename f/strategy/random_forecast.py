@@ -2,7 +2,7 @@
 import pandas as pd
 import numpy as np
 
-from backtest import Strategy
+from ..backtest import Strategy
 
 
 class RandomForecastingStrategy(Strategy):
