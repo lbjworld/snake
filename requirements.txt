@@ -1,0 +1,10 @@
+pandas
+pandas-datareader
+scikit-learn
+matplotlib
+jupyter
+tushare
+lxml
+bs4
+gym
+git+https://github.com/lbjworld/gym-trading.git
