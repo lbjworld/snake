@@ -1,7 +1,9 @@
-pandas
-pandas-datareader
+pytz
+numpy
 scikit-learn
 matplotlib
+pandas
+pandas-datareader
 jupyter
 tushare
 lxml
