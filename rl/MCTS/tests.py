@@ -4,17 +4,17 @@ from __future__ import unicode_literals
 import unittest
 
 from gym_trading.envs.fast_trading_env import FastTradingEnv
-from trading_policy import TradingPolicy
+from trading_policy import RandomTradingPolicy
 from trading_node import TradingNode
 
 
-class TradingPolicyTestCase(unittest.TestCase):
+class RandomTradingPolicyTestCase(unittest.TestCase):
     def setUp(self):
         self.env = FastTradingEnv(name='000333.SZ', days=100)
 
     def test_trading_policy(self):
         action_options = self.env.action_options()
-        policy = TradingPolicy(action_options=action_options)
+        policy = RandomTradingPolicy(action_options=action_options)
         self.assertTrue(policy)
         state = 'test state'
         action = policy.get_action(state)
@@ -27,7 +27,7 @@ class TradingNodeTestCase(unittest.TestCase):
         self.days = 100
         self.env = FastTradingEnv(name=self.stock_name, days=self.days)
         action_options = self.env.action_options()
-        self.policy = TradingPolicy(action_options=action_options)
+        self.policy = RandomTradingPolicy(action_options=action_options)
         from utils import klass_factory
         self.TradingEnvNode = klass_factory(
             'Env_{name}_TradingNode'.format(name=self.stock_name),

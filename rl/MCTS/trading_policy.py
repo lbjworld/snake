@@ -6,7 +6,7 @@ import random
 from base_policy import BasePolicy
 
 
-class TradingPolicy(BasePolicy):
+class RandomTradingPolicy(BasePolicy):
     def __init__(self, action_options):
         self.action_options = action_options
 
