@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 
 import unittest
+from ete3 import Tree
 
 from gym_trading.envs.fast_trading_env import FastTradingEnv
 from trading_policy import RandomTradingPolicy
@@ -24,7 +25,7 @@ class RandomTradingPolicyTestCase(unittest.TestCase):
 class TradingNodeTestCase(unittest.TestCase):
     def setUp(self):
         self.stock_name = '000333.SZ'
-        self.days = 100
+        self.days = 30
         self.env = FastTradingEnv(name=self.stock_name, days=self.days)
         action_options = self.env.action_options()
         self.policy = RandomTradingPolicy(action_options=action_options)
@@ -33,6 +34,7 @@ class TradingNodeTestCase(unittest.TestCase):
             'Env_{name}_TradingNode'.format(name=self.stock_name),
             init_args={
                 'env': self.env,
+                'graph': Tree(),
             },
             base_klass=TradingNode
         )
@@ -55,6 +57,7 @@ class TradingNodeTestCase(unittest.TestCase):
         self.assertTrue(start_node)
         self.assertEqual(root_node, start_node)
         self.assertEqual(root_node.get_rollout_count(), 1)
+        root_node.show_graph()
 
     def test_multiple_episode(self):
         self.assertTrue(self.TradingEnvNode)
@@ -67,6 +70,7 @@ class TradingNodeTestCase(unittest.TestCase):
         self.assertEqual(root_node.visit_count, 0)
         top_visit_count = sum([c.visit_count for c in root_node._children])
         self.assertEqual(top_visit_count, count)
+        root_node.show_graph()
 
 
 if __name__ == '__main__':

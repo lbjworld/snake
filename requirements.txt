@@ -9,4 +9,5 @@ tushare
 lxml
 bs4
 gym
+ete3
 git+https://github.com/lbjworld/gym-trading.git
