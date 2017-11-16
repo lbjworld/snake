@@ -12,6 +12,15 @@ class RandomTradingPolicy(BasePolicy):
 
     def get_action(self, state):
         assert(isinstance(self.action_options, list))
-        # choose action by considering state
-        # TODO: random first
         return random.choice(self.action_options)
+
+
+class HoldTradingPolicy(BasePolicy):
+    def __init__(self, action_options, action_idx=0):
+        self.action_options = action_options
+        self.action_idx = action_idx
+
+    def get_action(self, state):
+        assert(isinstance(self.action_options, list))
+        return self.action_options[self.action_idx]
+

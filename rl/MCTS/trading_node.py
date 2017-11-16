@@ -13,16 +13,9 @@ class TradingNode(BaseNode):
     graph = None  # for drawing graph
     _last_graph_node = None
 
-    # internal state
-    _sum_reward = 0.0
-
     @classmethod
     def get_rollout_count(cls):
         return cls.rollout_count
-
-    @classmethod
-    def accumulate_reward(cls, reward):
-        cls._sum_reward += reward
 
     @classmethod
     def add_graph_node(cls, name, reward=None):
@@ -35,7 +28,7 @@ class TradingNode(BaseNode):
             else:
                 assert(len(next_node) == 1)
                 cls._last_graph_node = next_node[0]
-            if reward:
+            if reward is not None:
                 cls._last_graph_node.add_features(final_reward=reward)
 
     @classmethod
@@ -66,6 +59,38 @@ class TradingNode(BaseNode):
     def visit_count(self):
         return len(self._step_rewards)
 
+    @property
+    def q_table(self):
+        """action -> total_reward"""
+        q_table = dict()
+        for action in self.env.action_options():
+            if self._children[action]:
+                rewards = self._children[action].get_recursive_reward()
+                q_table[action] = sum(rewards) / float(len(rewards))
+        return q_table
+
+    @property
+    def average_reward(self):
+        if self._step_rewards:
+            return sum(self._step_rewards) / float(len(self._step_rewards))
+        return 0.0
+
+    @property
+    def is_leaf(self):
+        return not any(self._children)
+
+    def get_recursive_reward(self):
+        """traverse sub-tree to get rewards"""
+        # TODO: optimize here, remove recursively function call
+        rewards = []
+        if self.is_leaf:
+            rewards = [self.average_reward]
+        else:
+            for n in self._children:
+                if n:
+                    rewards.extend(n.get_recursive_reward())
+        return rewards
+
     def step(self, policy):
         """
             Args:
@@ -78,28 +103,23 @@ class TradingNode(BaseNode):
         action = policy.get_action(self._state)
         # run in env
         obs, reward, done, info = NodeClass.env.step(action)
-        NodeClass.accumulate_reward(reward)
-        next_node = None
+        next_node = self._children[action]
+        if next_node:
+            # reuse exist one
+            next_node._save_reward(step_reward=reward)
+        else:
+            # create new node
+            assert(obs.get('ticker').shape)
+            next_node = NodeClass(state=obs['ticker'], parent_action=action)
+            next_node._save_reward(step_reward=reward)
+            self._children[action] = next_node
         if not done:
-            # episode haven't done
-            next_node = self._children[action]
-            if next_node:
-                # reuse exist one
-                next_node._save_reward(step_reward=reward)
-            else:
-                # create new node
-                assert(obs.get('ticker').shape)
-                next_node = NodeClass(state=obs['ticker'], parent_action=action)
-                next_node._save_reward(step_reward=reward)
-                self._children[action] = next_node
             NodeClass.add_graph_node(name='{a}'.format(a=action))
         else:
             # episode done, reach leaf node
+            NodeClass.add_graph_node(name='{a}'.format(a=action), reward=reward)
             NodeClass.rollout_count += 1
-            # record final info
-            self._final_reward = NodeClass._sum_reward
-            NodeClass.add_graph_node(name='{a}'.format(a=action), reward=self._final_reward)
             # clean stats
-            NodeClass._sum_reward = 0.0
             NodeClass.clean_graph()
+            next_node = None
         return next_node
