@@ -18,4 +18,4 @@ def fast_moving(env, policy, steps=1):
         obs, _, done, _ = env.step(action)
         if done:
             break
-        state = obs['ticker']
+        state = obs

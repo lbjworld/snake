@@ -109,8 +109,7 @@ class TradingNode(BaseNode):
             next_node._save_reward(step_reward=reward)
         else:
             # create new node
-            assert(obs.get('ticker').shape)
-            next_node = NodeClass(state=obs['ticker'], parent_action=action)
+            next_node = NodeClass(state=obs, parent_action=action)
             next_node._save_reward(step_reward=reward)
             self._children[action] = next_node
         if not done:
