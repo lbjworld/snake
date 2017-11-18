@@ -8,7 +8,7 @@ from gym_trading.envs import FastTradingEnv
 from utils import klass_factory, fast_moving
 from trading_policy import RandomTradingPolicy, HoldTradingPolicy
 from trading_node import TradingNode
-from mcts import MCTS
+from mcts import MCTSBuilder
 
 
 class RandomTradingPolicyTestCase(unittest.TestCase):
@@ -70,12 +70,12 @@ class TradingNodeTestCase(unittest.TestCase):
         self.assertTrue(root_node)
         self.assertEqual(root_node.get_rollout_count(), count)
         self.assertEqual(root_node.visit_count, 0)
-        top_visit_count = sum([c.visit_count for c in root_node._children])
+        top_visit_count = sum([c.visit_count for c in root_node._children if c])
         self.assertEqual(top_visit_count, count)
         root_node.show_graph()
 
 
-class MCTSTestCase(unittest.TestCase):
+class MCTSBuilderTestCase(unittest.TestCase):
     def setUp(self):
         self.stock_name = '000333.SZ'
         self.days = 30
@@ -84,11 +84,11 @@ class MCTSTestCase(unittest.TestCase):
     def test_mcts_batch_debug(self):
         policy = RandomTradingPolicy(action_options=self.env.action_options())
         self.env.reset()
-        block = MCTS(self.env, debug=True)
+        block = MCTSBuilder(self.env, debug=True)
 
         snapshot_v0 = self.env.snapshot()
         block.clean_up()
-        root_node = block.run_batch(policy, env_snapshot=snapshot_v0, episode=10)
+        root_node = block.run_batch([policy], env_snapshot=snapshot_v0, episode=10)
         self.assertTrue(root_node)
         root_node.show_graph()
         self.assertTrue(root_node.q_table)
@@ -100,12 +100,12 @@ class MCTSTestCase(unittest.TestCase):
         # buy and hold policy
         hold_policy = HoldTradingPolicy(action_options=self.env.action_options(), action_idx=1)
         self.env.reset()
-        block = MCTS(self.env, debug=True)
+        block = MCTSBuilder(self.env, debug=True)
 
         # first run
         snapshot_v0 = self.env.snapshot()
         block.clean_up()
-        root_node = block.run_once(hold_policy, env_snapshot=snapshot_v0)
+        root_node = block.run_once([hold_policy], env_snapshot=snapshot_v0)
         self.assertTrue(root_node)
         root_node.show_graph()
 
@@ -119,7 +119,7 @@ class MCTSTestCase(unittest.TestCase):
         block.clean_up()
         self.env.reset()  # call reset to randomly initialize env
         # recover env to snapshot_mid
-        root_node = block.run_once(hold_policy, env_snapshot=snapshot_v1)
+        root_node = block.run_once([hold_policy], env_snapshot=snapshot_v1)
         self.assertTrue(root_node)
         root_node.show_graph()
 
