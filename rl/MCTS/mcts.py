@@ -10,11 +10,11 @@ from trading_node import TradingNode
 
 
 class MCTSBuilder(object):
-    def __init__(self, gym_env, debug=False):
+    def __init__(self, gym_env, init_node=None, debug=False):
         assert(gym_env)
         self._debug = debug
         self._gym_env = gym_env
-        self._root_node = None
+        self._root_node = init_node
 
     @property
     def node_klass(self):
