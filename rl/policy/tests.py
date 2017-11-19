@@ -12,7 +12,7 @@ from model_policy import ModelTradingPolicy
 
 class ModelPolicyTestCase(unittest.TestCase):
     def setUp(self):
-        self.days = 100
+        self.days = 30
         self.env = FastTradingEnv(name='000333.SZ', days=self.days)
 
     def test_usage_sample(self):
@@ -26,7 +26,7 @@ class ModelPolicyTestCase(unittest.TestCase):
         exploit_policy = ModelTradingPolicy(
             action_options=self.env.action_options(),
             model=resnet_model,
-            debug=True
+            debug=False
         )
         self.assertTrue(exploit_policy)
         explore_policy = RandomTradingPolicy(action_options=self.env.action_options())
@@ -41,8 +41,11 @@ class ModelPolicyTestCase(unittest.TestCase):
             policies=[exploit_policy, explore_policy],
             probability_dist=[0.9, 0.1],
             env_snapshot=snapshot_v0,
-            episode=self.days
+            batch_size=50
         )
+        root_node = root_node._children[0]
+        self.assertTrue(root_node)
+        root_node.show_graph()
         q_table = root_node.q_table
         print q_table
         self.assertTrue(q_table)

@@ -24,15 +24,16 @@ class ResnetTradingModel(object):
             optimizer=adam, loss='categorical_crossentropy', metrics=['accuracy']
         )
 
-    def _preprocess(self, x):
+    def _preprocess(self, batch_x):
         # extend to add channel dimension
-        return np.expand_dims(x, axis=0)
+        return np.expand_dims(batch_x, axis=3)
 
-    def train_on_batch(self, x, y):
+    def train_on_batch(self, batch_x, y):
         assert(self._model)
         # TODO: add model checkpoint
-        return self._model.train_on_batch(self._preprocess(x), y)
+        return self._model.train_on_batch(self._preprocess(batch_x), y)
 
     def predict(self, x, debug=False):
         assert(self._model)
-        return self._model.predict(self._preprocess(x), verbose=debug)
+        batch_x = np.expand_dims(x, axis=0)
+        return self._model.predict(self._preprocess(batch_x), batch_size=1, verbose=debug)

@@ -1,6 +1,8 @@
 # coding: utf-8
 from __future__ import unicode_literals
 
+import numpy as np
+
 from MCTS.base_policy import BasePolicy
 
 
@@ -15,4 +17,4 @@ class ModelTradingPolicy(BasePolicy):
         assert(isinstance(self.action_options, list))
         # predict by using model
         predict_actions = self._model.predict(state, debug=self._debug)
-        return predict_actions.index(max(predict_actions))
+        return np.argmax(predict_actions)

@@ -88,7 +88,7 @@ class MCTSBuilderTestCase(unittest.TestCase):
 
         snapshot_v0 = self.env.snapshot()
         block.clean_up()
-        root_node = block.run_batch([policy], env_snapshot=snapshot_v0, episode=10)
+        root_node = block.run_batch([policy], env_snapshot=snapshot_v0, batch_size=10)
         self.assertTrue(root_node)
         root_node.show_graph()
         self.assertTrue(root_node.q_table)

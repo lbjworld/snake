@@ -62,8 +62,8 @@ class MCTSBuilder(object):
         # episode end
         return self._root_node
 
-    def run_batch(self, policies, probability_dist=None, episode=100, env_snapshot=None):
-        for idx in tqdm(range(episode)):
+    def run_batch(self, policies, probability_dist=None, batch_size=100, env_snapshot=None):
+        for idx in tqdm(range(batch_size)):
             self.run_once(
                 policies=policies,
                 probability_dist=probability_dist,

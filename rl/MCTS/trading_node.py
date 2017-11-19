@@ -20,18 +20,24 @@ class TradingNode(BaseNode):
         return cls.rollout_count
 
     @classmethod
-    def add_graph_node(cls, name, reward=None):
+    def add_graph_node(cls, name, latest_ticker=None, reward=None):
         if cls.graph:
             if cls._last_graph_node is None:
                 cls._last_graph_node = cls.graph
+            is_new_node = False
             next_node = filter(lambda x: x.name == name, cls._last_graph_node.children)
             if not next_node:
-                cls._last_graph_node = cls._last_graph_node.add_child(name=name)
+                cls._last_graph_node = cls._last_graph_node.add_child(name=str(name))
+                is_new_node = True
             else:
                 assert(len(next_node) == 1)
                 cls._last_graph_node = next_node[0]
             if reward is not None:
                 cls._last_graph_node.add_features(final_reward=reward)
+            if is_new_node:
+                if latest_ticker.any():
+                    # order: open high low close volume
+                    cls._last_graph_node.add_features(close=latest_ticker[3])
 
     @classmethod
     def clean_graph(cls):
@@ -118,10 +124,10 @@ class TradingNode(BaseNode):
             next_node._save_reward(step_reward=reward)
             self._children[action] = next_node
         if not done:
-            NodeClass.add_graph_node(name='{a}'.format(a=action))
+            NodeClass.add_graph_node(name='{a}'.format(a=action), latest_ticker=obs[info['step']])
         else:
             # episode done, reach leaf node
-            NodeClass.add_graph_node(name='{a}'.format(a=action), reward=reward)
+            NodeClass.add_graph_node(name='{a}'.format(a=action), latest_ticker=obs[info['step']], reward=reward)
             NodeClass.rollout_count += 1
             # clean stats
             NodeClass.clean_graph()
