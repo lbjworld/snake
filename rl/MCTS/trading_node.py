@@ -108,10 +108,7 @@ class TradingNode(BaseNode):
         """
         assert(self.env and policy)
         NodeClass = self._get_klass()
-        if np.any(self._state):
-            action = policy.get_action(self._state)
-        else:
-            action = self.env.action_options()[0]
+        action = policy.get_action(self._state)
         # run in env
         obs, reward, done, info = NodeClass.env.step(action)
         next_node = self._children[action]

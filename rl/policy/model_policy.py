@@ -15,6 +15,9 @@ class ModelTradingPolicy(BasePolicy):
 
     def get_action(self, state):
         assert(isinstance(self.action_options, list))
+        if not np.any(state):
+            # init state
+            return self.action_options[0]
         # predict by using model
         predict_actions = self._model.predict(state, debug=self._debug)
         return np.argmax(predict_actions)
