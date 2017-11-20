@@ -5,18 +5,19 @@ from gym_trading.envs import FastTradingEnv
 
 from MCTS.mcts import MCTSBuilder
 from MCTS.trading_policy import RandomTradingPolicy
+from sim_policy import SimPolicy
 
 
 class SimTrajectory(object):
-    def __init__(self, env, model_policy, sim_policy, explore_rate=1e-01, debug=False):
-        assert(env and model_policy and sim_policy)
+    def __init__(self, env, model_policy, explore_rate=1e-01, debug=False):
+        assert(env and model_policy)
         self._debug = debug
         self._main_env = env
         self._explore_rate = explore_rate
         self._exploit_rate = 1.0 - explore_rate
         self._exploit_policy = model_policy
         self._explore_policy = RandomTradingPolicy(action_options=self._main_env.action_options())
-        self._sim_policy = sim_policy
+        self._sim_policy = SimPolicy(action_options=self._main_env.action_options())
 
         # change every step of trajectory
         self._sim_history = []
@@ -26,6 +27,7 @@ class SimTrajectory(object):
         return self._sim_history
 
     def _state_evaluation(self, init_node=None, batch_size=100):
+        # TODO: optimize when nearly end of episode, change from mcts to traverse search
         tmp_env = FastTradingEnv(name=self._main_env.name, days=self._main_env.days)
         # do MCTS
         mcts_block = MCTSBuilder(tmp_env, init_node=init_node, debug=self._debug)
