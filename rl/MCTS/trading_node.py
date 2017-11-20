@@ -35,7 +35,7 @@ class TradingNode(BaseNode):
             if reward is not None:
                 cls._last_graph_node.add_features(final_reward=reward)
             if is_new_node:
-                if latest_ticker.any():
+                if np.any(latest_ticker):
                     # order: open high low close volume
                     cls._last_graph_node.add_features(close=latest_ticker[3])
 
@@ -87,6 +87,10 @@ class TradingNode(BaseNode):
     def is_leaf(self):
         return not any(self._children)
 
+    def set_env(self, env):
+        # override class attribute 'env'
+        self._get_klass().env = env
+
     def get_recursive_reward(self):
         """traverse sub-tree to get rewards"""
         # TODO: optimize here, remove recursively function call
@@ -106,7 +110,7 @@ class TradingNode(BaseNode):
             Returns:
                 TradingNode: next node if exist (None if done)
         """
-        assert(self.env and policy)
+        assert(policy)
         NodeClass = self._get_klass()
         action = policy.get_action(self._state)
         # run in env

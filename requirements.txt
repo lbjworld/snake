@@ -4,11 +4,12 @@ scikit-learn
 matplotlib==2.1.0
 pandas==0.21.0
 pandas-datareader==0.5.0
-jupyter
+ipython==5.5.0
+jupyter==1.0.0
 tushare
 lxml
 bs4
-gym
-ete3
+gym==0.9.4
+ete3==3.1.1
 tqdm
 git+https://github.com/lbjworld/gym-trading.git

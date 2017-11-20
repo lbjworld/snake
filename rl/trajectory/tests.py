@@ -15,6 +15,7 @@ class SimTrajectoryTestCase(unittest.TestCase):
     def setUp(self):
         self.days = 30
         self.env = FastTradingEnv(name='000333.SZ', days=self.days)
+        self.env.reset()
 
     def test_run_trajectory(self):
         self.assertTrue(self.env)
@@ -33,14 +34,13 @@ class SimTrajectoryTestCase(unittest.TestCase):
         sim_policy = SimPolicy(action_options=self.env.action_options())
         self.assertTrue(sim_policy)
 
-        self.env.reset()
         # start trajectory
         t = SimTrajectory(
             env=self.env,
             model_policy=model_policy,
             sim_policy=sim_policy
         )
-        t.sim_run(batch_size=100)
+        t.sim_run(batch_size=50)
         print t.history
         self.assertEqual(len(t.history), self.days)
 

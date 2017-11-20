@@ -55,6 +55,8 @@ class MCTSBuilder(object):
         else:
             # simply reset env
             self._gym_env.reset()
+        # recover node's env
+        self._root_node.set_env(self._gym_env)
         current_node = self._root_node
         while current_node:
             policy = self._get_policy(policies, probability_dist)
