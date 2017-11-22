@@ -7,8 +7,8 @@ from gym_trading.envs import FastTradingEnv
 from policy.resnet_trading_model import ResnetTradingModel
 from policy.model_policy import ModelTradingPolicy
 
-from sim_policy import SimPolicy
-from trajectory import SimTrajectory
+from trajectory.sim_policy import SimPolicy
+from trajectory.sim_trajectory import SimTrajectory
 
 
 class SimTrajectoryTestCase(unittest.TestCase):
@@ -31,16 +31,13 @@ class SimTrajectoryTestCase(unittest.TestCase):
             debug=False
         )
         self.assertTrue(model_policy)
-        sim_policy = SimPolicy(action_options=self.env.action_options())
-        self.assertTrue(sim_policy)
 
         # start trajectory
         t = SimTrajectory(
             env=self.env,
-            model_policy=model_policy,
-            sim_policy=sim_policy
+            model_policy=model_policy
         )
-        t.sim_run(batch_size=50)
+        t.sim_run(rounds_per_step=50)
         print t.history
         self.assertEqual(len(t.history), self.days)
 

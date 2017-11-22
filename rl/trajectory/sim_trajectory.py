@@ -26,7 +26,7 @@ class SimTrajectory(object):
     def history(self):
         return self._sim_history
 
-    def _state_evaluation(self, init_node=None, batch_size=100):
+    def _state_evaluation(self, init_node=None, rounds_per_step=100):
         # TODO: optimize when nearly end of episode, change from mcts to traverse search
         tmp_env = FastTradingEnv(name=self._main_env.name, days=self._main_env.days)
         # do MCTS
@@ -35,7 +35,7 @@ class SimTrajectory(object):
             policies=[self._exploit_policy, self._explore_policy],
             probability_dist=[self._exploit_rate, self._explore_rate],
             env_snapshot=self._main_env.snapshot(),
-            batch_size=batch_size
+            rounds_per_step=rounds_per_step
         )
         return root_node
 
@@ -47,15 +47,17 @@ class SimTrajectory(object):
         # save simluation history
         self._sim_history.append({
             'obs': obs,
+            'q_table': q_table,
             'reward': reward,
         })
         return action, done
 
-    def sim_run(self, batch_size=100):
+    def sim_run(self, rounds_per_step=100):
         done = False
         init_node = None
         while not done:
-            result_node = self._state_evaluation(init_node=init_node, batch_size=batch_size)
+            result_node = self._state_evaluation(
+                init_node=init_node, rounds_per_step=rounds_per_step)
             action, done = self._sim_step(result_node.q_table)
             # set init_node to action node
             init_node = result_node._children[action]
