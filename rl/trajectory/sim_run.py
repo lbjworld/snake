@@ -4,14 +4,14 @@ from __future__ import unicode_literals
 import logging
 from gym_trading.envs import FastTradingEnv
 
-from policy.resnet_trading_model import ResnetTradingModel
-from policy.model_policy import ModelTradingPolicy
-from trajectory.sim_trajectory import SimTrajectory
-
 logger = logging.getLogger(__name__)
 
 
 def sim_run_func(params):
+    from policy.resnet_trading_model import ResnetTradingModel
+    from policy.model_policy import ModelTradingPolicy
+    from trajectory.sim_trajectory import SimTrajectory
+
     # get input parameters
     stock_name = params['stock_name']
     episode_length = params['episode_length']

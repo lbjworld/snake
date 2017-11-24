@@ -7,8 +7,6 @@ import pickle
 import numpy as np
 from collections import OrderedDict
 
-from policy.resnet_trading_model import ResnetTradingModel
-
 logger = logging.getLogger(__name__)
 
 
@@ -24,6 +22,7 @@ class PolicyIterator(object):
         self._data_dir = data_dir
 
     def init_model(self, model_name):
+        from policy.resnet_trading_model import ResnetTradingModel
         # build model and save to model_dir
         model = ResnetTradingModel(
             name=model_name,
@@ -54,6 +53,7 @@ class PolicyIterator(object):
         return np.array(_x), np.array(_y)
 
     def improve(self, src, target, batch_size=32, epochs=100):
+        from policy.resnet_trading_model import ResnetTradingModel
         # load src model
         model = ResnetTradingModel(
             name=src,
