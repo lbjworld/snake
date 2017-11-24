@@ -33,7 +33,8 @@ class PolicyIterator(object):
         )
         model.save_model(self._model_dir, model_name)
 
-    def _load_sim_data(self, model_name, size):
+    def _load_sim_data(self, model_name, size=1000):
+        # TODO: add size limit
         # load sim data from data_dir
         _data_files = []
         for root, dirs, files in os.walk(self._data_dir):
@@ -55,7 +56,10 @@ class PolicyIterator(object):
     def improve(self, src, target, batch_size=32, epochs=100):
         # load src model
         model = ResnetTradingModel(
-            name=src, load_model=True, episode_days=self._episode_length
+            name=src,
+            model_dir=self._model_dir,
+            load_model=True,
+            episode_days=self._episode_length
         )
         # load train data
         train_x, y = self._load_sim_data(model_name=src)

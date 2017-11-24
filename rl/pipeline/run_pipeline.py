@@ -22,14 +22,14 @@ def stock_list():
     stock_basics = ts.get_stock_basics()  # get stock basics
     # TODO: 过滤掉上市时间小于EPISODE_LENGTH天的
     stock_codes = sorted(
-        [r[0] + ('.SS' if int(r[0]) >= 5 else '.SZ') for r in stock_basics.iterrows()]
+        [r[0] + ('.SS' if int(r[0][0]) >= 5 else '.SZ') for r in stock_basics.iterrows()]
     )
     return stock_codes
 
 
 def pipeline(base_model_name):
     def gen_model_name(bn, version=0):
-        return '{bn}.v{g}'.format(bn=bn, g=version)
+        return '{bn}_v{g}'.format(bn=bn, g=version)
 
     stock_codes = stock_list()
     assert(len(stock_codes) >= TRAIN_SIZE + VALID_SIZE + TEST_SIZE)
@@ -48,8 +48,11 @@ def pipeline(base_model_name):
             model_name=current_model_name,
             episode_length=EPISODE_LENGTH,
             explore_rate=1e-01,
+            sim_count=8,
+            rounds_per_step=100,
         )
-        sim_gen.run()
+        sim_gen.run(sim_batch_size=8)
+        logger.info('policy evaluation finished')
         target_model_name = gen_model_name(base_model_name, version=model_version+1)
         # policy improvement
         policy_iter.improve(
@@ -57,6 +60,7 @@ def pipeline(base_model_name):
             target=target_model_name,
             epochs=100,
         )
+        logger.info('policy improve finished')
         # policy validation (compare between target and src)
         result_model_name = policy_validator.validate(
             valid_stocks=stock_codes[TRAIN_SIZE:TRAIN_SIZE+VALID_SIZE],
@@ -74,4 +78,6 @@ def pipeline(base_model_name):
 
 
 if __name__ == '__main__':
+    assert(logger)
+    logging.basicConfig(filename='pipeline.log', level=logging.DEBUG)
     pipeline(base_model_name='resnet_18')

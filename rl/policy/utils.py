@@ -20,5 +20,5 @@ def get_latest_file(path, name, delimiter='.', order_field_idx=1):
                 continue
             if name in file_name and t > latest_time:
                 latest_time = t
-                latest_file_name = name
+                latest_file_name = file_name
     return latest_file_name

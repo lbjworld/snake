@@ -1,13 +1,14 @@
 # coding: utf-8
 from __future__ import unicode_literals
 
+import logging
 import os
 import time
 import numpy as np
-import keras
 
-from resnet import ResnetBuilder
 from utils import get_latest_file
+
+logger = logging.getLogger(__name__)
 
 
 class ResnetTradingModel(object):
@@ -30,7 +31,8 @@ class ResnetTradingModel(object):
             self._model = self._build_model(name=name)
         assert(self._model)
 
-    def _build_model(self, name):
+    def _build_model(self, name, optimizer=None):
+        from resnet import ResnetBuilder
         """build model from scratch"""
         # input: (channel, row, col) -> (1, episode_days, ticker)
         # output: action probability
@@ -38,22 +40,26 @@ class ResnetTradingModel(object):
             input_shape=(1, self._episode_days, self._feature_num),
             num_outputs=2
         )
-        ResnetBuilder.check_model(_model, name=name)
-        adam = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
+        logger.debug('built trade model[{name}]'.format(name=name))
+        # ResnetBuilder.check_model(_model, name=name)
+        if not optimizer:
+            import keras
+            optimizer = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
         _model.compile(
-            optimizer=adam, loss='mean_squared_error', metrics=['accuracy']
+            optimizer=optimizer, loss='mean_squared_error', metrics=['accuracy']
         )
+        logger.debug('compiled trade model[{name}]'.format(name=name))
         return _model
 
     def _load_latest_model(self, model_dir, name):
         """load latest model by name"""
         latest_name = get_latest_file(model_dir, name)
         if not latest_name:
-            raise Exception(
-                '{k} latest model not found.'.format(k=self.__klass__))
+            raise Exception('[ResnetTradingModel] latest model not found.')
         model_path = os.path.join(model_dir, latest_name)
         assert(model_path)
         _model = self._build_model(name)
+        logger.debug('loading trade model from [{p}]'.format(p=model_path))
         _model.load_weights(model_path)
         return _model
 
@@ -65,6 +71,7 @@ class ResnetTradingModel(object):
         if not os.path.exists(model_dir):
             os.makedirs(model_dir)
         model_path = os.path.join(model_dir, self._gen_model_name(name))
+        logger.debug('save trade model[{name}] to [{p}]'.format(name=name, p=model_path))
         self._model.save_weights(model_path)
 
     def _preprocess(self, batch_x):
@@ -77,6 +84,7 @@ class ResnetTradingModel(object):
 
     def fit(self, train_x, y, epochs, batch_size=32):
         assert(self._model)
+        logger.debug('fit train_x({xs}), y({ys})'.format(xs=train_x.shape, ys=y.shape))
         return self._model.fit(
             self._preprocess(train_x), y, epochs=epochs, batch_size=batch_size,
             shuffle=True, validation_split=0.1

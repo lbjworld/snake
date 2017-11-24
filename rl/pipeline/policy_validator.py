@@ -2,9 +2,12 @@
 from __future__ import unicode_literals
 
 import logging
+import os
 import random
+import shutil
 from concurrent import futures
 
+from policy.utils import get_latest_file
 from trajectory.sim_run import sim_run_func
 
 logger = logging.getLogger(__name__)
@@ -65,4 +68,10 @@ class PolicyValidator(object):
             model_dir=self._tmp_model_dir,
             model_name=target,
         )
-        return target if target_avg_reward > src_avg_reward else src
+        selected_model = src
+        if target_avg_reward > src_avg_reward:
+            selected_model = target
+            # move model from tmp_model_dir to model_dir
+            selected_model_file = get_latest_file(self._tmp_model_dir, selected_model)
+            shutil.copy(os.path.join(self._tmp_model_dir, selected_model_file), self._model_dir)
+        return selected_model
