@@ -61,7 +61,7 @@ class SimGenerator(object):
                         logger.error('Sim[{i}] error: {e}'.format(i=idx, e=exception))
                         continue
                     logger.info('Sim[{i}] finished'.format(i=idx))
-                    _results.append(future.result(timeout=self._worker_timeout))
+                    _results.extend(future.result(timeout=self._worker_timeout))
                 logger.debug('Sim: get all results size({s})'.format(s=len(_results)))
                 if _results:
                     # save results to file

@@ -32,16 +32,20 @@ def _load_sim_data(model_name, data_dir, size=1000):
         for file_name in files:
             if model_name in file_name:
                 _data_files.append(os.path.join(root, file_name))
+    logger.debug('get sim data files size({s})'.format(s=len(_data_files)))
     _x, _y = [], []
     for file_path in _data_files:
         with open(file_path, 'r') as f:
             records = pickle.load(f)
             for r in records:
+                logger.debug('*****{r}'.format(r=r))
                 _x.append(r['obs'])
                 # TODO: how to deal with 'final_reward' ?
-                _y.append(
-                    OrderedDict(sorted(r['q_table'].items())).values()
-                )
+                action_values = [0.0] * 2
+                for k, v in r['q_table'].items():
+                    action_values[int(k)] = v
+                _y.append(action_values)
+    logger.debug('sim data loaded, size({xs})'.format(xs=len(_x)))
     return np.array(_x), np.array(_y)
 
 
@@ -82,7 +86,7 @@ class PolicyIterator(object):
             )
             res = f.result()
             if not res:
-                logger.info('init_model error:{e}'.format(e=f.exception()))
+                logger.error('init_model error:{e}'.format(e=f.exception()))
                 return False
             return True
 
@@ -94,7 +98,7 @@ class PolicyIterator(object):
             )
             res = f.result()
             if not res:
-                logger.info('improve_model error:{e}'.format(e=f.exception()))
+                logger.error('improve_model error:{e}'.format(e=f.exception()))
                 return False
             return True
 

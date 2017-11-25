@@ -58,7 +58,7 @@ def pipeline(base_model_name):
         policy_iter.improve(
             src=current_model_name,
             target=target_model_name,
-            epochs=100,
+            epochs=10,
         )
         logger.info('policy improve finished')
         # policy validation (compare between target and src)
@@ -66,6 +66,7 @@ def pipeline(base_model_name):
             valid_stocks=stock_codes[TRAIN_SIZE:TRAIN_SIZE+VALID_SIZE],
             src=current_model_name,
             target=target_model_name,
+            rounds=10,
         )
         if result_model_name != current_model_name:
             # policy improved !!!
