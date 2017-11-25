@@ -15,7 +15,7 @@ TRAIN_SIZE = 2500
 VALID_SIZE = 200
 TEST_SIZE = 300
 MAX_GENERATION = 100
-EPISODE_LENGTH = 30
+EPISODE_LENGTH = 10
 
 
 def stock_list():
@@ -48,10 +48,10 @@ def pipeline(base_model_name):
             model_name=current_model_name,
             episode_length=EPISODE_LENGTH,
             explore_rate=1e-01,
-            sim_count=8,
-            rounds_per_step=100,
+            sim_count=2,
+            rounds_per_step=5,
         )
-        sim_gen.run(sim_batch_size=8)
+        sim_gen.run(sim_batch_size=2)
         logger.info('policy evaluation finished')
         target_model_name = gen_model_name(base_model_name, version=model_version+1)
         # policy improvement

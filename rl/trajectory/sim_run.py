@@ -41,7 +41,7 @@ def sim_run_func(params):
         env=_env, model_policy=_policy, explore_rate=sim_explore_rate, debug=debug
     )
     logger.debug('start simulate trajectory, rounds_per_step({r})'.format(r=rounds_per_step))
-    _sim.run(rounds_per_step=rounds_per_step)
-    logger.debug('finished simluate trajectory, history size({s})'.format(s=len(_sim_history)))
+    _sim.sim_run(rounds_per_step=rounds_per_step)
+    logger.debug('finished simluate trajectory, history size({s})'.format(s=len(_sim.history)))
     # collect data
     return _sim.history

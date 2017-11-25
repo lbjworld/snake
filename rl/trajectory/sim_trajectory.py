@@ -35,7 +35,7 @@ class SimTrajectory(object):
             policies=[self._exploit_policy, self._explore_policy],
             probability_dist=[self._exploit_rate, self._explore_rate],
             env_snapshot=self._main_env.snapshot(),
-            rounds_per_step=rounds_per_step
+            batch_size=rounds_per_step
         )
         return root_node
 
