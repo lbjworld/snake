@@ -5,7 +5,6 @@ import logging
 import os
 import pickle
 import numpy as np
-from collections import OrderedDict
 from concurrent import futures
 
 logger = logging.getLogger(__name__)
@@ -24,7 +23,7 @@ def _init_model_func(model_dir, model_name, episode_length):
     return True
 
 
-def _load_sim_data(model_name, data_dir, size=1000):
+def _load_sim_data(model_name, data_dir, action_space_size, size=1000):
     # TODO: add size limit
     # load sim data from data_dir
     _data_files = []
@@ -40,7 +39,7 @@ def _load_sim_data(model_name, data_dir, size=1000):
             for r in records:
                 _x.append(r['obs'])
                 # TODO: how to deal with 'final_reward' ?
-                action_values = [0.0] * 2
+                action_values = [0.0] * action_space_size
                 for k, v in r['q_table'].items():
                     action_values[int(k)] = v
                 _y.append(action_values)
@@ -48,7 +47,10 @@ def _load_sim_data(model_name, data_dir, size=1000):
     return np.array(_x), np.array(_y)
 
 
-def _improve_func(model_dir, tmp_model_dir, data_dir, src, target, episode_length, batch_size, epochs):
+def _improve_func(
+    model_dir, tmp_model_dir, data_dir, src, target, episode_length, batch_size, epochs,
+    action_space_size,
+):
     from policy.resnet_trading_model import ResnetTradingModel
     # load src model
     model = ResnetTradingModel(
@@ -58,7 +60,9 @@ def _improve_func(model_dir, tmp_model_dir, data_dir, src, target, episode_lengt
         episode_days=episode_length
     )
     # load train data
-    train_x, y = _load_sim_data(model_name=src, data_dir=data_dir)
+    train_x, y = _load_sim_data(
+        model_name=src, data_dir=data_dir, action_space_size=action_space_size
+    )
     logger.debug('train_x:{xs}, y:{ys}'.format(xs=train_x.shape, ys=y.shape))
     # training
     model.fit(train_x, y, epochs=epochs, batch_size=batch_size)
@@ -89,16 +93,14 @@ class PolicyIterator(object):
                 return False
             return True
 
-    def improve(self, src, target, batch_size=32, epochs=100):
+    def improve(self, src, target, batch_size=32, epochs=100, action_space_size=2):
         with futures.ProcessPoolExecutor(max_workers=1) as executor:
             f = executor.submit(
                 _improve_func, self._model_dir, self._tmp_model_dir, self._data_dir, src, target,
-                self._episode_length, batch_size, epochs
+                self._episode_length, batch_size, epochs, action_space_size,
             )
             res = f.result()
             if not res:
                 logger.error('improve_model error:{e}'.format(e=f.exception()))
                 return False
             return True
-
-

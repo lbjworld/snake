@@ -25,7 +25,7 @@ class PolicyValidator(object):
         self._data_dir = data_dir
         self._debug = debug
 
-    def _validate_model(self, valid_stocks, model_dir, model_name, rounds=200, worker_num=4):
+    def _validate_model(self, valid_stocks, model_dir, model_name, rounds, worker_num):
         # run sim trajectory on model, and return average reward
         _result = []
         with futures.ProcessPoolExecutor(max_workers=worker_num) as executor:
@@ -51,7 +51,7 @@ class PolicyValidator(object):
                 _result.append(r[-1]['final_reward'])
         return sum(_result) * 1.0 / len(_result)
 
-    def validate(self, valid_stocks, src, target, rounds=200):
+    def validate(self, valid_stocks, src, target, rounds=200, worker_num=4):
         """
         Args:
             src(string): src model name
@@ -65,12 +65,14 @@ class PolicyValidator(object):
             model_dir=self._model_dir,
             model_name=src,
             rounds=rounds,
+            worker_num=worker_num,
         )
         target_avg_reward = self._validate_model(
             valid_stocks=valid_stocks,
             model_dir=self._tmp_model_dir,
             model_name=target,
             rounds=rounds,
+            worker_num=worker_num,
         )
         selected_model = src
         if target_avg_reward > src_avg_reward:

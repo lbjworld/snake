@@ -15,7 +15,15 @@ TRAIN_SIZE = 2500
 VALID_SIZE = 200
 TEST_SIZE = 300
 MAX_GENERATION = 100
-EPISODE_LENGTH = 10
+EPISODE_LENGTH = 30
+ACTION_SPACE_SIZE = 2
+SIM_ROUNDS = 300  # total sample size: SIM_COUNT * EPISODE_LENGTH
+SIM_BATCH_SIZE = 50
+SIM_ROUNDS_PER_STEP = 200
+IMPROVE_EPOCHS = 100
+VALID_ROUNDS = 20
+
+CPU_CORES = 2
 
 
 def stock_list():
@@ -48,17 +56,19 @@ def pipeline(base_model_name):
             model_name=current_model_name,
             episode_length=EPISODE_LENGTH,
             explore_rate=1e-01,
-            sim_count=2,
-            rounds_per_step=5,
+            sim_count=SIM_ROUNDS,
+            rounds_per_step=SIM_ROUNDS_PER_STEP,
+            worker_num=CPU_CORES,
         )
-        sim_gen.run(sim_batch_size=2)
+        sim_gen.run(sim_batch_size=SIM_BATCH_SIZE)
         logger.info('policy evaluation finished')
         target_model_name = gen_model_name(base_model_name, version=model_version+1)
         # policy improvement
         policy_iter.improve(
             src=current_model_name,
             target=target_model_name,
-            epochs=10,
+            epochs=IMPROVE_EPOCHS,
+            action_space_size=ACTION_SPACE_SIZE,
         )
         logger.info('policy improve finished')
         # policy validation (compare between target and src)
@@ -66,7 +76,8 @@ def pipeline(base_model_name):
             valid_stocks=stock_codes[TRAIN_SIZE:TRAIN_SIZE+VALID_SIZE],
             src=current_model_name,
             target=target_model_name,
-            rounds=10,
+            rounds=VALID_ROUNDS,
+            worker_num=CPU_CORES,
         )
         if result_model_name != current_model_name:
             # policy improved !!!
