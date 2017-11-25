@@ -38,7 +38,6 @@ def _load_sim_data(model_name, data_dir, size=1000):
         with open(file_path, 'r') as f:
             records = pickle.load(f)
             for r in records:
-                logger.debug('*****{r}'.format(r=r))
                 _x.append(r['obs'])
                 # TODO: how to deal with 'final_reward' ?
                 action_values = [0.0] * 2
