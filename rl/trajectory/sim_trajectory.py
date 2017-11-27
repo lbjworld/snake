@@ -1,6 +1,7 @@
 # coding: utf-8
 from __future__ import unicode_literals
 
+import gc
 from gym_trading.envs import FastTradingEnv
 
 from MCTS.mcts import MCTSBuilder
@@ -25,6 +26,9 @@ class SimTrajectory(object):
     @property
     def history(self):
         return self._sim_history
+
+    def __delete__(self):
+        gc.collect()
 
     def _state_evaluation(self, init_node=None, rounds_per_step=100):
         # TODO: optimize when nearly end of episode, change from mcts to traverse search
