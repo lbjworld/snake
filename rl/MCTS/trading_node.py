@@ -6,18 +6,36 @@ import numpy as np
 from base_node import BaseNode
 
 
+class Edge(object):
+    def __init__(self, prior_p, up, down=None):
+        assert(prior_p and up)
+        # relation data
+        self._up_node = up
+        self._down_node = down
+        # internal data
+        self._visit_count = 0
+        self._total_reward = 0.0
+        self._mean_reward = 0.0
+        self._action_probability = prior_p
+
+    def backup(self, v):
+        self._total_reward += v
+        self._visit_count += 1
+        self._mean_reward = self._total_reward / self._visit_count
+
+
 class TradingNode(BaseNode):
     # global settings
     env = None
-    rollout_count = 0
+    episode_count = 0
 
     # debug infos
     graph = None  # for drawing graph
     _last_graph_node = None
 
     @classmethod
-    def get_rollout_count(cls):
-        return cls.rollout_count
+    def get_episode_count(cls):
+        return cls.episode_count
 
     @classmethod
     def add_graph_node(cls, name, latest_ticker=None, reward=None):
@@ -49,87 +67,90 @@ class TradingNode(BaseNode):
         if cls.graph:
             print(cls.graph.get_ascii(attributes=['name', 'final_reward']))
 
-    def __init__(self, state, parent_action=None):
+    def __init__(self, state, up_edge=None):
         self._state = state
-        self._parent_action = parent_action
-        self._step_rewards = []
-        self._children = [None] * len(self.env.action_options())
-        # _final_reward shouldn't be None if it is leaf node
-        self._final_reward = None
+        self._up_edge = up_edge
+        action_size = len(self.env.action_options())
+        self._down_edges = [Edge(prior_p=1.0/action_size, up=self) for i in range(action_size)]
 
     def _get_klass(self):
         return self.__class__
 
-    def _save_reward(self, step_reward=None):
-        self._step_rewards.append(step_reward)
-
-    @property
-    def visit_count(self):
-        return len(self._step_rewards)
-
-    @property
-    def q_table(self):
-        """action -> total_reward"""
-        q_table = dict()
-        for action in self.env.action_options():
-            if self._children[action]:
-                rewards = self._children[action].get_recursive_reward()
-                q_table[action] = sum(rewards) / float(len(rewards))
-        return q_table
-
-    @property
-    def average_reward(self):
-        if self._step_rewards:
-            return sum(self._step_rewards) / float(len(self._step_rewards))
-        return 0.0
-
     @property
     def is_leaf(self):
-        return not any(self._children)
+        return all([e.end for e in self._edges])
+
+    @property
+    def is_root(self):
+        return bool(not self._up_edge)
+
+    @property
+    def q_table(self, t=1.0):
+        # do actual play based on current node
+        # return pai(action|state)
+        _c = [np.power(e._visit_count, 1.0/t) for e in self._down_edges]
+        _sum_c = sum(_c)
+        return [i/_sum_c for i in _c]
 
     def set_env(self, env):
         # override class attribute 'env'
         self._get_klass().env = env
 
-    def get_recursive_reward(self):
-        """traverse sub-tree to get rewards"""
-        # TODO: optimize here, remove recursively function call
-        rewards = []
-        if self.is_leaf:
-            rewards = [self.average_reward]
-        else:
-            for n in self._children:
-                if n:
-                    rewards.extend(n.get_recursive_reward())
-        return rewards
+    def _select(self, c_puct=1.0):
+        # refer to: PUCT algorithm
+        total_visit_count = sum([e._visit_count for e in self._down_edges])
+        max_v = 0.0
+        action = 0
+        for a_i, e in enumerate(self._down_edges):
+            v = e._mean_reward + c_puct * e._action_probability * np.sqrt(total_visit_count) / (1 + e._visit_count)
+            if max_v < v:
+                max_v = v
+                action = a_i
+        return action
+
+    def _backup(self, v):
+        current_node = self
+        while current_node and not current_node.is_root:
+            current_node._up_edge.backup(v)
+            current_node = current_node._up_edge._up_node
 
     def step(self, policy):
         """
             Args:
-                policy (Policy): policy object
+                policy (Policy): policy object for evaluation
             Returns:
                 TradingNode: next node if exist (None if done)
         """
-        assert(policy)
         NodeClass = self._get_klass()
-        action = policy.get_action(self._state)
+        action = self._select()
         # run in env
         obs, reward, done, info = NodeClass.env.step(action)
-        next_node = self._children[action]
-        if next_node:
-            # reuse exist one
-            next_node._save_reward(step_reward=reward)
+        next_edge = self._down_edges[action]
+        if not next_edge._down_node:
+            # expand new node
+            next_node = NodeClass(state=obs, up_edge=next_edge)
+            next_edge._down_node = next_node
+            # evaluate with policy
+            p, v = policy.evaluate(obs)
+            # backup
+            next_node._backup(v)
         else:
-            # create new node
-            next_node = NodeClass(state=obs, parent_action=action)
-            next_node._save_reward(step_reward=reward)
-            self._children[action] = next_node
+            # reuse exist node
+            next_node = next_edge._down_node
+
         if not done:
-            NodeClass.add_graph_node(name='{a}'.format(a=action), latest_ticker=obs[info['step']])
+            NodeClass.add_graph_node(
+                name='{a}'.format(a=action),
+                latest_ticker=obs[info['step']]
+            )
         else:
             # episode done, reach leaf node
-            NodeClass.add_graph_node(name='{a}'.format(a=action), latest_ticker=obs[info['step']], reward=reward)
-            NodeClass.rollout_count += 1
+            NodeClass.add_graph_node(
+                name='{a}'.format(a=action),
+                latest_ticker=obs[info['step']],
+                reward=reward
+            )
+            NodeClass.episode_count += 1
             # clean stats
             NodeClass.clean_graph()
             next_node = None

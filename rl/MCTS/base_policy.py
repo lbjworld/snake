@@ -13,3 +13,8 @@ class BasePolicy(object):
     def get_action(self, state):
         """choose action base on current state"""
         raise NotImplemented
+
+    @abc.abstractmethod
+    def evaluate(self, state):
+        """evaluation state"""
+        raise NotImplemented

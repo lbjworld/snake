@@ -27,7 +27,7 @@ class RandomTradingPolicyTestCase(unittest.TestCase):
 class TradingNodeTestCase(unittest.TestCase):
     def setUp(self):
         self.stock_name = '000333.SZ'
-        self.days = 30
+        self.days = 10
         self.env = FastTradingEnv(name=self.stock_name, days=self.days)
         action_options = self.env.action_options()
         self.policy = RandomTradingPolicy(action_options=action_options)
@@ -46,7 +46,7 @@ class TradingNodeTestCase(unittest.TestCase):
         current_node = root_node
         while current_node:
             if debug:
-                print current_node._state, current_node._parent_action
+                print current_node._state
             current_node = current_node.step(self.policy)
         return root_node
 
@@ -58,7 +58,7 @@ class TradingNodeTestCase(unittest.TestCase):
         self.assertTrue(root_node)
         self.assertTrue(start_node)
         self.assertEqual(root_node, start_node)
-        self.assertEqual(root_node.get_rollout_count(), 1)
+        self.assertEqual(root_node.get_episode_count(), 1)
         root_node.show_graph()
 
     def test_multiple_episode(self):
@@ -68,10 +68,8 @@ class TradingNodeTestCase(unittest.TestCase):
         for i in range(count):
             root_node = self.run_one_episode(root_node)
         self.assertTrue(root_node)
-        self.assertEqual(root_node.get_rollout_count(), count)
-        self.assertEqual(root_node.visit_count, 0)
-        top_visit_count = sum([c.visit_count for c in root_node._children if c])
-        self.assertEqual(top_visit_count, count)
+        self.assertEqual(root_node.get_episode_count(), count)
+        # TODO: test edges
         root_node.show_graph()
 
 
@@ -92,7 +90,7 @@ class MCTSBuilderTestCase(unittest.TestCase):
         self.assertTrue(root_node)
         root_node.show_graph()
         self.assertTrue(root_node.q_table)
-        for action, t_reward in root_node.q_table.items():
+        for action, t_reward in enumerate(root_node.q_table):
             self.assertGreaterEqual(t_reward, 0.0)
         print root_node.q_table
 
