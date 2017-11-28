@@ -84,7 +84,6 @@ class ResnetTradingModel(object):
         return self._model.train_on_batch(self._preprocess(batch_x), y)
 
     def fit(self, train_x, y, epochs, batch_size=32):
-        logger.debug('fit train_x({xs}), y({ys})'.format(xs=train_x.shape, ys=y.shape))
         return self._model.fit(
             self._preprocess(train_x), y, epochs=epochs, batch_size=batch_size,
             shuffle=True, validation_split=0.1
