@@ -9,7 +9,8 @@ from keras.models import Model
 from keras.layers import (
     Input,
     Activation,
-    Dense
+    Dense,
+    Flatten,
 )
 from keras.layers.convolutional import (
     Conv2D,
@@ -224,12 +225,15 @@ class ResnetBuilder(object):
 
         # policy header
         policy_header = _conv_bn_relu(filters=2, kernel_size=(1, 1), strides=(1, 1))(block)
+        policy_header = Flatten()(policy_header)
         policy_header = Dense(
-            units=num_outputs, kernel_initializer="he_normal", activation="softmax"
+            units=num_outputs, kernel_initializer="he_normal",
+            activation="softmax", name='policy_header',
         )(policy_header)
 
         # value header
         value_header = _conv_bn_relu(filters=1, kernel_size=(1, 1), strides=(1, 1))(block)
+        value_header = Flatten()(value_header)
         value_header = Dense(
             units=256, kernel_initializer="he_normal", activation="linear"
         )(value_header)
@@ -237,7 +241,7 @@ class ResnetBuilder(object):
         value_header = Dense(
             units=1, activation="linear"
         )(value_header)
-        value_header = Activation("tanh")(value_header)
+        value_header = Activation("tanh", name='value_header')(value_header)
 
         model = Model(inputs=input, outputs=[policy_header, value_header])
         return model
