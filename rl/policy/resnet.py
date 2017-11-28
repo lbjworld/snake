@@ -241,7 +241,7 @@ class ResnetBuilder(object):
         value_header = Dense(
             units=1, activation="linear"
         )(value_header)
-        value_header = Activation("tanh", name='value_header')(value_header)
+        value_header = Activation("softmax", name='value_header')(value_header)
 
         model = Model(inputs=input, outputs=[policy_header, value_header])
         return model

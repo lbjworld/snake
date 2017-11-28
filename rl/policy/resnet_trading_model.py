@@ -44,10 +44,10 @@ class ResnetTradingModel(object):
         # ResnetBuilder.check_model(_model, name=name)
         if not optimizer:
             import keras
-            optimizer = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
+            optimizer = keras.optimizers.SGD(lr=0.01, momentum=0.9)
         _model.compile(
             optimizer=optimizer,
-            loss=['mean_squared_logarithmic_error', 'mean_squared_error'],
+            loss=['cosine_proximity', 'mean_squared_error'],
             metrics=['accuracy'],
         )
         logger.debug('compiled trade model[{name}]'.format(name=name))

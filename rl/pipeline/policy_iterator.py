@@ -23,7 +23,7 @@ def _init_model_func(model_dir, model_name, episode_length):
     return True
 
 
-def _load_sim_data(model_name, data_dir, size=1000):
+def _load_sim_data(model_name, data_dir, target_reward, size=1000):
     # TODO: add size limit
     # load sim data from data_dir
     _data_files = []
@@ -40,7 +40,7 @@ def _load_sim_data(model_name, data_dir, size=1000):
                 _x.append(r['obs'])
                 p = r['q_table']
                 p_y.append(p)
-                v = r['final_reward']
+                v = 1.0 if r['final_reward'] > target_reward else 0.0
                 v_y.append(v)
     logger.debug('sim data loaded, size({xs})'.format(xs=len(_x)))
     return np.array(_x), [np.array(p_y), np.array(v_y)]
@@ -48,6 +48,7 @@ def _load_sim_data(model_name, data_dir, size=1000):
 
 def _improve_func(
     model_dir, tmp_model_dir, data_dir, src, target, episode_length, batch_size, epochs,
+    target_reward,
 ):
     from policy.resnet_trading_model import ResnetTradingModel
     # load src model
@@ -58,7 +59,7 @@ def _improve_func(
         episode_days=episode_length
     )
     # load train data
-    train_x, y = _load_sim_data(model_name=src, data_dir=data_dir)
+    train_x, y = _load_sim_data(model_name=src, data_dir=data_dir, target_reward=target_reward)
     logger.debug(
         'train_x:{xs}, policy_y:{pys}, value_y:{vys}'.format(
             xs=train_x.shape, pys=y[0].shape, vys=y[1].shape
@@ -75,12 +76,13 @@ class PolicyIterator(object):
 
     def __init__(
         self, episode_length, data_dir='./sim_data', model_dir='./models',
-        tmp_model_dir='./tmp_models'
+        tmp_model_dir='./tmp_models', target_reward=1.2,
     ):
         self._episode_length = episode_length
         self._tmp_model_dir = tmp_model_dir
         self._model_dir = model_dir
         self._data_dir = data_dir
+        self._target_reward = target_reward
 
     def init_model(self, model_name):
         with futures.ProcessPoolExecutor(max_workers=1) as executor:
@@ -97,7 +99,7 @@ class PolicyIterator(object):
         with futures.ProcessPoolExecutor(max_workers=1) as executor:
             f = executor.submit(
                 _improve_func, self._model_dir, self._tmp_model_dir, self._data_dir, src, target,
-                self._episode_length, batch_size, epochs,
+                self._episode_length, batch_size, epochs, self._target_reward,
             )
             res = f.result()
             if not res:
