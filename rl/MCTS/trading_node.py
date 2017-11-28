@@ -92,6 +92,13 @@ class TradingNode(BaseNode):
         _sum_c = sum(_c)
         return [i/_sum_c for i in _c]
 
+    def set_next_root(self, action):
+        next_root = self._down_edges[action]._down_node
+        # clean up
+        next_root._up_edge = None
+        # gc.collect()
+        return next_root
+
     def set_env(self, env):
         # override class attribute 'env'
         self._get_klass().env = env

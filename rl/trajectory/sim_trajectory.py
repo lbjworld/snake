@@ -5,7 +5,6 @@ import gc
 from gym_trading.envs import FastTradingEnv
 
 from MCTS.mcts import MCTSBuilder
-from MCTS.trading_policy import RandomTradingPolicy
 from sim_policy import SimPolicy
 
 
@@ -15,9 +14,7 @@ class SimTrajectory(object):
         self._debug = debug
         self._main_env = env
         self._explore_rate = explore_rate
-        self._exploit_rate = 1.0 - explore_rate
         self._exploit_policy = model_policy
-        self._explore_policy = RandomTradingPolicy(action_options=self._main_env.action_options())
         self._sim_policy = SimPolicy(action_options=self._main_env.action_options())
 
         # change every step of trajectory
@@ -36,8 +33,7 @@ class SimTrajectory(object):
         # do MCTS
         mcts_block = MCTSBuilder(tmp_env, init_node=init_node, debug=self._debug)
         root_node = mcts_block.run_batch(
-            policies=[self._exploit_policy, self._explore_policy],
-            probability_dist=[self._exploit_rate, self._explore_rate],
+            policy=self._exploit_policy,
             env_snapshot=self._main_env.snapshot(),
             batch_size=rounds_per_step
         )
@@ -64,7 +60,7 @@ class SimTrajectory(object):
                 init_node=init_node, rounds_per_step=rounds_per_step)
             action, done = self._sim_step(result_node.q_table)
             # set init_node to action node
-            init_node = result_node._children[action]
+            init_node = result_node._down_edges[action]._down_node
         final_reward = self._sim_history[-1]['reward']  # last reward as final reward
         for item in self._sim_history:
             item['final_reward'] = final_reward

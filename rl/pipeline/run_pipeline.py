@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 
 import logging
+from datetime import date, datetime, timedelta
 import tushare as ts
 
 from pipeline.sim_generator import SimGenerator
@@ -16,21 +17,30 @@ VALID_SIZE = 200
 TEST_SIZE = 300
 MAX_GENERATION = 100
 EPISODE_LENGTH = 30
-ACTION_SPACE_SIZE = 2
-SIM_ROUNDS = 100  # total sample size: SIM_ROUNDS * EPISODE_LENGTH
-SIM_BATCH_SIZE = 20
-SIM_ROUNDS_PER_STEP = 20
+SIM_ROUNDS = 10  # total sample size: SIM_ROUNDS * EPISODE_LENGTH
+SIM_BATCH_SIZE = 5
+SIM_ROUNDS_PER_STEP = 10
 IMPROVE_EPOCHS = 100
-VALID_ROUNDS = 10
+VALID_ROUNDS = 1
 
 CPU_CORES = 2
 
 
-def stock_list():
+def get_ipo_date(code, stock_basics):
+    ipo_date = datetime.strptime(str(stock_basics.loc[code]['timeToMarket']), '%Y%m%d').date() \
+        if stock_basics.loc[code]['timeToMarket'] else date(2000, 1, 1)
+    return ipo_date
+
+
+def stock_list(min_days):
+    now_date = datetime.now().date()
     stock_basics = ts.get_stock_basics()  # get stock basics
-    # TODO: 过滤掉上市时间小于EPISODE_LENGTH天的
+    # 过滤掉上市时间小于EPISODE_LENGTH天的
     stock_codes = sorted(
-        [r[0] + ('.SS' if int(r[0][0]) >= 5 else '.SZ') for r in stock_basics.iterrows()]
+        [
+            r[0] + ('.SS' if int(r[0][0]) >= 5 else '.SZ') for r in stock_basics.iterrows()
+            if now_date > get_ipo_date(r[0], stock_basics) + timedelta(days=min_days)
+        ]
     )
     return stock_codes
 
@@ -39,7 +49,7 @@ def pipeline(base_model_name):
     def gen_model_name(bn, version=0):
         return '{bn}_v{g}'.format(bn=bn, g=version)
 
-    stock_codes = stock_list()
+    stock_codes = stock_list(min_days=EPISODE_LENGTH)
     assert(len(stock_codes) >= TRAIN_SIZE + VALID_SIZE + TEST_SIZE)
     generation = 0
     model_version = 0
@@ -68,7 +78,6 @@ def pipeline(base_model_name):
             src=current_model_name,
             target=target_model_name,
             epochs=IMPROVE_EPOCHS,
-            action_space_size=ACTION_SPACE_SIZE,
         )
         logger.info('policy improve finished')
         # policy validation (compare between target and src)

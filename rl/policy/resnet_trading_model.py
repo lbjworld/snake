@@ -41,7 +41,7 @@ class ResnetTradingModel(object):
             num_outputs=2
         )
         logger.debug('built trade model[{name}]'.format(name=name))
-        ResnetBuilder.check_model(_model, name=name)
+        # ResnetBuilder.check_model(_model, name=name)
         if not optimizer:
             import keras
             optimizer = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
