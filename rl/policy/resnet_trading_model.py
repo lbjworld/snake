@@ -41,12 +41,14 @@ class ResnetTradingModel(object):
             num_outputs=2
         )
         logger.debug('built trade model[{name}]'.format(name=name))
-        # ResnetBuilder.check_model(_model, name=name)
+        ResnetBuilder.check_model(_model, name=name)
         if not optimizer:
             import keras
             optimizer = keras.optimizers.Adam(lr=0.001, beta_1=0.9, beta_2=0.999, epsilon=1e-08)
         _model.compile(
-            optimizer=optimizer, loss='mean_squared_error', metrics=['accuracy']
+            optimizer=optimizer,
+            loss=['mean_squared_logarithmic_error', 'mean_squared_error'],
+            metrics=['accuracy'],
         )
         logger.debug('compiled trade model[{name}]'.format(name=name))
         return _model
@@ -79,11 +81,9 @@ class ResnetTradingModel(object):
         return np.expand_dims(batch_x, axis=3)
 
     def train_on_batch(self, batch_x, y):
-        assert(self._model)
         return self._model.train_on_batch(self._preprocess(batch_x), y)
 
     def fit(self, train_x, y, epochs, batch_size=32):
-        assert(self._model)
         logger.debug('fit train_x({xs}), y({ys})'.format(xs=train_x.shape, ys=y.shape))
         return self._model.fit(
             self._preprocess(train_x), y, epochs=epochs, batch_size=batch_size,
@@ -91,6 +91,5 @@ class ResnetTradingModel(object):
         )
 
     def predict(self, x, debug=False):
-        assert(self._model)
         batch_x = np.expand_dims(x, axis=0)
         return self._model.predict(self._preprocess(batch_x), batch_size=1, verbose=debug)

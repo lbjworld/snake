@@ -38,12 +38,7 @@ class MCTSBuilder(object):
         self._root_node = None
         gc.collect()
 
-    def _get_policy(self, policies, probability_dist=None):
-        if probability_dist:
-            assert(len(policies) == len(probability_dist))
-        return np.random.choice(policies, p=probability_dist)
-
-    def run_once(self, policies, probability_dist=None, env_snapshot=None):
+    def run_once(self, policy, env_snapshot=None):
         if not self._root_node:
             # init node
             self._root_node = self.node_klass(state=None)
@@ -59,16 +54,14 @@ class MCTSBuilder(object):
         self._root_node.set_env(self._gym_env)
         current_node = self._root_node
         while current_node:
-            policy = self._get_policy(policies, probability_dist)
             current_node = current_node.step(policy)
         # episode end
         return self._root_node
 
-    def run_batch(self, policies, probability_dist=None, batch_size=100, env_snapshot=None):
+    def run_batch(self, policy, batch_size=100, env_snapshot=None):
         for idx in tqdm(range(batch_size)):
             self.run_once(
-                policies=policies,
-                probability_dist=probability_dist,
+                policy=policy,
                 env_snapshot=env_snapshot
             )
         return self._root_node

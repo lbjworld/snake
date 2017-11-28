@@ -9,13 +9,11 @@ from keras.models import Model
 from keras.layers import (
     Input,
     Activation,
-    Dense,
-    Flatten
+    Dense
 )
 from keras.layers.convolutional import (
     Conv2D,
-    MaxPooling2D,
-    AveragePooling2D
+    MaxPooling2D
 )
 from keras.layers.merge import add
 from keras.layers.normalization import BatchNormalization
@@ -224,15 +222,24 @@ class ResnetBuilder(object):
         # Last activation
         block = _bn_relu(block)
 
-        # Classifier block
-        block_shape = K.int_shape(block)
-        pool2 = AveragePooling2D(pool_size=(block_shape[ROW_AXIS], block_shape[COL_AXIS]),
-                                 strides=(1, 1))(block)
-        flatten1 = Flatten()(pool2)
-        dense = Dense(units=num_outputs, kernel_initializer="he_normal",
-                      activation="softmax")(flatten1)
+        # policy header
+        policy_header = _conv_bn_relu(filters=2, kernel_size=(1, 1), strides=(1, 1))(block)
+        policy_header = Dense(
+            units=num_outputs, kernel_initializer="he_normal", activation="softmax"
+        )(policy_header)
 
-        model = Model(inputs=input, outputs=dense)
+        # value header
+        value_header = _conv_bn_relu(filters=1, kernel_size=(1, 1), strides=(1, 1))(block)
+        value_header = Dense(
+            units=256, kernel_initializer="he_normal", activation="linear"
+        )(value_header)
+        value_header = Activation("relu")(value_header)
+        value_header = Dense(
+            units=1, activation="linear"
+        )(value_header)
+        value_header = Activation("tanh")(value_header)
+
+        model = Model(inputs=input, outputs=[policy_header, value_header])
         return model
 
     @staticmethod
