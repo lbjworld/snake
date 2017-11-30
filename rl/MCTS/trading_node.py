@@ -2,13 +2,14 @@
 from __future__ import unicode_literals
 
 import numpy as np
+from ete3 import Tree
 
 from base_node import BaseNode
 
 
 class Edge(object):
     def __init__(self, prior_p, up, down=None):
-        assert(prior_p and up)
+        assert(up)
         # relation data
         self._up_node = up
         self._down_node = down
@@ -29,63 +30,67 @@ class TradingNode(BaseNode):
     env = None
     episode_count = 0
 
-    # debug infos
-    graph = None  # for drawing graph
-    _last_graph_node = None
-
     @classmethod
     def get_episode_count(cls):
         return cls.episode_count
 
-    @classmethod
-    def add_graph_node(cls, name, latest_ticker=None, reward=None):
-        if cls.graph:
-            if cls._last_graph_node is None:
-                cls._last_graph_node = cls.graph
-            is_new_node = False
-            next_node = filter(lambda x: x.name == name, cls._last_graph_node.children)
-            if not next_node:
-                cls._last_graph_node = cls._last_graph_node.add_child(name=str(name))
-                is_new_node = True
-            else:
-                assert(len(next_node) == 1)
-                cls._last_graph_node = next_node[0]
-            if reward is not None:
-                cls._last_graph_node.add_features(final_reward=reward)
-            if is_new_node:
-                if np.any(latest_ticker):
-                    # order: open high low close volume
-                    cls._last_graph_node.add_features(close=latest_ticker[3])
-
-    @classmethod
-    def clean_graph(cls):
-        if cls.graph:
-            cls._last_graph_node = None
-
-    @classmethod
-    def show_graph(cls):
-        if cls.graph:
-            print(cls.graph.get_ascii(attributes=['name', 'final_reward']))
-
-    def __init__(self, state, up_edge=None):
+    def __init__(self, state, up_edge=None, prior_ps=None):
         self._state = state
         self._up_edge = up_edge
         action_size = len(self.env.action_options())
-        self._down_edges = [Edge(prior_p=1.0/action_size, up=self) for i in range(action_size)]
+        if prior_ps is None:
+            prior_ps = [1.0/action_size for i in range(action_size)]
+        self._down_edges = [Edge(prior_p=prior_ps[i], up=self) for i in range(action_size)]
 
     def _get_klass(self):
         return self.__class__
 
+    # DEBUG helper
+    #############################
+    def draw_graph(self, node, graph_node):
+        for action, down_edge in enumerate(node._down_edges):
+            c = graph_node.add_child(name=unicode(action))
+            c.add_features(
+                N=down_edge._visit_count,
+                W=down_edge._total_reward,
+                Q=down_edge._mean_reward,
+                P=down_edge._action_probability,
+            )
+            if down_edge._down_node:
+                self.draw_graph(down_edge._down_node, c)
+
+    def show_graph(self, name=None):
+        t = Tree()
+        self.draw_graph(self, t)
+        # if name:
+        #    t.render(file_name=name)
+        # print(t.get_ascii(attributes=['name', 'N', 'W', 'Q', 'P']))
+        print(t.get_ascii(attributes=['name', 'N', 'Q']))
+
+    def find_leaf_node(self):
+        if self.is_leaf:
+            return self
+        # find sub edge
+        for e in self._down_edges:
+            if e._down_node:
+                return e._down_node.find_leaf_node()
+
+    def show_final_state(self):
+        leaf_node = self.find_leaf_node()
+        assert(leaf_node)
+        return leaf_node._state
+    #############################
+
     @property
     def is_leaf(self):
-        return all([e.end for e in self._edges])
+        return all([not e._down_node for e in self._down_edges])
 
     @property
     def is_root(self):
         return bool(not self._up_edge)
 
     @property
-    def q_table(self, t=1.0):
+    def q_table(self, t=0.1):
         # do actual play based on current node
         # return pai(action|state)
         _c = [np.power(e._visit_count, 1.0/t) for e in self._down_edges]
@@ -103,17 +108,17 @@ class TradingNode(BaseNode):
         # override class attribute 'env'
         self._get_klass().env = env
 
-    def _select(self, c_puct=1.0):
+    def _select(self, c_puct=0.9):
         # refer to: PUCT algorithm
         total_visit_count = sum([e._visit_count for e in self._down_edges])
-        max_v = 0.0
-        action = 0
-        for a_i, e in enumerate(self._down_edges):
-            v = e._mean_reward + c_puct * e._action_probability * np.sqrt(total_visit_count) / (1 + e._visit_count)
-            if max_v < v:
-                max_v = v
-                action = a_i
-        return action
+        vs = []
+        for e in self._down_edges:
+            v = e._mean_reward + c_puct * e._action_probability * \
+                np.sqrt(total_visit_count * 1.0) / (1.0 + e._visit_count)
+            vs.append(v)
+        if vs[1:] == vs[:-1]:
+            return np.random.choice(range(len(vs)))
+        return np.argmax(vs)
 
     def _backup(self, v):
         current_node = self
@@ -134,31 +139,19 @@ class TradingNode(BaseNode):
         obs, reward, done, info = NodeClass.env.step(action)
         next_edge = self._down_edges[action]
         if not next_edge._down_node:
-            # expand new node
-            next_node = NodeClass(state=obs, up_edge=next_edge)
-            next_edge._down_node = next_node
             # evaluate with policy
             p, v = policy.evaluate(obs)
+            # expand new node
+            next_node = NodeClass(state=obs, up_edge=next_edge, prior_ps=p)
+            next_edge._down_node = next_node
             # backup
             next_node._backup(v)
         else:
             # reuse exist node
             next_node = next_edge._down_node
 
-        if not done:
-            NodeClass.add_graph_node(
-                name='{a}'.format(a=action),
-                latest_ticker=obs[info['step']]
-            )
-        else:
+        if done:
             # episode done, reach leaf node
-            NodeClass.add_graph_node(
-                name='{a}'.format(a=action),
-                latest_ticker=obs[info['step']],
-                reward=reward
-            )
             NodeClass.episode_count += 1
-            # clean stats
-            NodeClass.clean_graph()
             next_node = None
         return next_node

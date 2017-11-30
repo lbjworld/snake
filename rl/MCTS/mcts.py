@@ -2,7 +2,6 @@
 from __future__ import unicode_literals
 
 import gc
-import numpy as np
 from tqdm import tqdm
 
 from utils import klass_factory
@@ -22,11 +21,6 @@ class MCTSBuilder(object):
         klass_init_args = {
             'env': copy_env,
         }
-        if self._debug:
-            from ete3 import Tree
-            klass_init_args.update({
-                'graph': Tree()
-            })
         return klass_factory(
             'Env_{name}_TradingNode'.format(name=copy_env.name),
             init_args=klass_init_args,

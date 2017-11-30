@@ -14,6 +14,8 @@ class SimPolicy(BasePolicy):
 
     def get_action(self, state):
         # state should be a q_table
+        if state[0] == state[1]:
+            return np.random.choice([0, 1])
         return np.argmax(state)
 
     def evaluate(self, state):

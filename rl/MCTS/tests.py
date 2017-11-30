@@ -59,7 +59,7 @@ class TradingNodeTestCase(unittest.TestCase):
         self.assertTrue(start_node)
         self.assertEqual(root_node, start_node)
         self.assertEqual(root_node.get_episode_count(), 1)
-        root_node.show_graph()
+        root_node.show_graph(name='basic')
 
     def test_multiple_episode(self):
         self.assertTrue(self.TradingEnvNode)
@@ -70,13 +70,13 @@ class TradingNodeTestCase(unittest.TestCase):
         self.assertTrue(root_node)
         self.assertEqual(root_node.get_episode_count(), count)
         # TODO: test edges
-        root_node.show_graph()
+        root_node.show_graph(name='multi_episode')
 
 
 class MCTSBuilderTestCase(unittest.TestCase):
     def setUp(self):
         self.stock_name = '000333.SZ'
-        self.days = 30
+        self.days = 10
         self.env = FastTradingEnv(name=self.stock_name, days=self.days)
 
     def test_mcts_batch_debug(self):
@@ -86,9 +86,9 @@ class MCTSBuilderTestCase(unittest.TestCase):
 
         snapshot_v0 = self.env.snapshot()
         block.clean_up()
-        root_node = block.run_batch([policy], env_snapshot=snapshot_v0, batch_size=10)
+        root_node = block.run_batch(policy, env_snapshot=snapshot_v0, batch_size=10)
         self.assertTrue(root_node)
-        root_node.show_graph()
+        root_node.show_graph(name='mcts_batch')
         self.assertTrue(root_node.q_table)
         for action, t_reward in enumerate(root_node.q_table):
             self.assertGreaterEqual(t_reward, 0.0)
@@ -103,9 +103,9 @@ class MCTSBuilderTestCase(unittest.TestCase):
         # first run
         snapshot_v0 = self.env.snapshot()
         block.clean_up()
-        root_node = block.run_once([hold_policy], env_snapshot=snapshot_v0)
+        root_node = block.run_once(hold_policy, env_snapshot=snapshot_v0)
         self.assertTrue(root_node)
-        root_node.show_graph()
+        root_node.show_graph(name='mcts_batch_from_snapshot')
 
         # generate another snapshot
         mid = self.days/2
@@ -117,7 +117,7 @@ class MCTSBuilderTestCase(unittest.TestCase):
         block.clean_up()
         self.env.reset()  # call reset to randomly initialize env
         # recover env to snapshot_mid
-        root_node = block.run_once([hold_policy], env_snapshot=snapshot_v1)
+        root_node = block.run_once(hold_policy, env_snapshot=snapshot_v1)
         self.assertTrue(root_node)
         root_node.show_graph()
 

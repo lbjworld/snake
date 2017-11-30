@@ -49,6 +49,8 @@ class PolicyValidator(object):
                 logger.info('validate Sim[{i}] finished'.format(i=idx))
                 r = future.result()
                 _result.append(r[-1]['final_reward'])
+        if not _result:
+            return 0.0
         return sum(_result) * 1.0 / len(_result)
 
     def validate(self, valid_stocks, src, target, rounds=200, worker_num=4):

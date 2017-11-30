@@ -76,7 +76,7 @@ class PolicyIterator(object):
 
     def __init__(
         self, episode_length, data_dir='./sim_data', model_dir='./models',
-        tmp_model_dir='./tmp_models', target_reward=1.2,
+        tmp_model_dir='./tmp_models', target_reward=1.0,
     ):
         self._episode_length = episode_length
         self._tmp_model_dir = tmp_model_dir

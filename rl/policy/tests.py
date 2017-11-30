@@ -41,10 +41,11 @@ class ModelPolicyTestCase(unittest.TestCase):
             batch_size=50
         )
         self.assertTrue(root_node)
-        root_node.show_graph()
+        root_node.show_graph(name='model_policy_tree')
         q_table = root_node.q_table
-        print q_table
         self.assertTrue(q_table)
+        print q_table
+        print root_node.show_final_state()
 
 
 if __name__ == '__main__':

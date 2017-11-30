@@ -35,10 +35,11 @@ class SimTrajectoryTestCase(unittest.TestCase):
         # start trajectory
         t = SimTrajectory(
             env=self.env,
-            model_policy=model_policy
+            model_policy=model_policy,
+            debug=True,
         )
         t.sim_run(rounds_per_step=50)
-        print t.history
+        # print t.history
         self.assertEqual(len(t.history), self.days)
 
 

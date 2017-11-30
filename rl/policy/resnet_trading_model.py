@@ -91,4 +91,5 @@ class ResnetTradingModel(object):
 
     def predict(self, x, debug=False):
         batch_x = np.expand_dims(x, axis=0)
-        return self._model.predict(self._preprocess(batch_x), batch_size=1, verbose=debug)
+        outputs = self._model.predict(self._preprocess(batch_x), batch_size=1, verbose=debug)
+        return np.squeeze(outputs[0], axis=0), np.squeeze(outputs[1], axis=0)[0]

@@ -60,7 +60,7 @@ class SimTrajectory(object):
                 init_node=init_node, rounds_per_step=rounds_per_step)
             action, done = self._sim_step(result_node.q_table)
             # set init_node to action node
-            init_node = result_node._down_edges[action]._down_node
+            init_node = result_node.set_next_root(action)
         final_reward = self._sim_history[-1]['reward']  # last reward as final reward
         for item in self._sim_history:
             item['final_reward'] = final_reward

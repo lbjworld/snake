@@ -24,6 +24,7 @@ IMPROVE_EPOCHS = 100
 VALID_ROUNDS = 1
 
 CPU_CORES = 2
+TARGET_MIN_VALUE=1.01
 
 
 def get_ipo_date(code, stock_basics):
@@ -54,7 +55,7 @@ def pipeline(base_model_name):
     generation = 0
     model_version = 0
     policy_validator = PolicyValidator(episode_length=EPISODE_LENGTH)
-    policy_iter = PolicyIterator(episode_length=EPISODE_LENGTH)
+    policy_iter = PolicyIterator(episode_length=EPISODE_LENGTH, target_reward=TARGET_MIN_VALUE)
     current_model_name = gen_model_name(base_model_name, version=model_version)
     # build model and save v0 version
     policy_iter.init_model(model_name=current_model_name)
