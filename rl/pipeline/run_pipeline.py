@@ -12,16 +12,17 @@ from pipeline.policy_validator import PolicyValidator
 logger = logging.getLogger(__name__)
 
 
-TRAIN_SIZE = 2500
+TRAIN_SIZE = 2000
 VALID_SIZE = 200
 TEST_SIZE = 300
 MAX_GENERATION = 100
 EPISODE_LENGTH = 30
-SIM_ROUNDS = 10  # total sample size: SIM_ROUNDS * EPISODE_LENGTH
-SIM_BATCH_SIZE = 5
-SIM_ROUNDS_PER_STEP = 10
+SIM_ROUNDS = 100  # total sample size: SIM_ROUNDS * EPISODE_LENGTH
+SIM_BATCH_SIZE = 20
+SIM_ROUNDS_PER_STEP = 100
 IMPROVE_EPOCHS = 100
-VALID_ROUNDS = 1
+VALID_ROUNDS = 10
+VALID_ROUNDS_PER_STEP = 100
 
 CPU_CORES = 2
 TARGET_MIN_VALUE=1.01
@@ -87,6 +88,7 @@ def pipeline(base_model_name):
             src=current_model_name,
             target=target_model_name,
             rounds=VALID_ROUNDS,
+            rounds_per_step=VALID_ROUNDS_PER_STEP,
             worker_num=CPU_CORES,
         )
         if result_model_name != current_model_name:

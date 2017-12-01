@@ -25,14 +25,14 @@ class PolicyValidator(object):
         self._data_dir = data_dir
         self._debug = debug
 
-    def _validate_model(self, valid_stocks, model_dir, model_name, rounds, worker_num):
+    def _validate_model(self, valid_stocks, model_dir, model_name, rounds, rounds_per_step, worker_num):
         # run sim trajectory on model, and return average reward
         _result = []
         with futures.ProcessPoolExecutor(max_workers=worker_num) as executor:
             future_to_idx = dict((executor.submit(sim_run_func, {
                 'stock_name': random.choice(valid_stocks),
                 'episode_length': self._episode_length,
-                'rounds_per_step': 10,
+                'rounds_per_step': rounds_per_step,
                 'model_name': model_name,
                 'model_dir': model_dir,
                 'model_feature_num': 5,
@@ -53,7 +53,7 @@ class PolicyValidator(object):
             return 0.0
         return sum(_result) * 1.0 / len(_result)
 
-    def validate(self, valid_stocks, src, target, rounds=200, worker_num=4):
+    def validate(self, valid_stocks, src, target, rounds=200, rounds_per_step=100, worker_num=4):
         """
         Args:
             src(string): src model name
@@ -67,6 +67,7 @@ class PolicyValidator(object):
             model_dir=self._model_dir,
             model_name=src,
             rounds=rounds,
+            rounds_per_step=rounds_per_step,
             worker_num=worker_num,
         )
         target_avg_reward = self._validate_model(
@@ -74,6 +75,7 @@ class PolicyValidator(object):
             model_dir=self._tmp_model_dir,
             model_name=target,
             rounds=rounds,
+            rounds_per_step=rounds_per_step,
             worker_num=worker_num,
         )
         selected_model = src
