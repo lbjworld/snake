@@ -2,7 +2,6 @@
 from __future__ import unicode_literals
 
 import gc
-from tqdm import tqdm
 
 from utils import klass_factory
 from trading_node import TradingNode
@@ -53,7 +52,11 @@ class MCTSBuilder(object):
         return self._root_node
 
     def run_batch(self, policy, batch_size=100, env_snapshot=None):
-        for idx in tqdm(range(batch_size)):
+        idx_list = range(batch_size)
+        if self._debug:
+            from tqdm import tqdm
+            idx_list = tqdm(idx_list)
+        for idx in idx_list:
             self.run_once(
                 policy=policy,
                 env_snapshot=env_snapshot

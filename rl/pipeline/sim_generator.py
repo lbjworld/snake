@@ -6,6 +6,7 @@ import os
 import pickle
 import time
 import random
+from tqdm import tqdm
 from concurrent import futures
 
 from trajectory.sim_run import sim_run_func
@@ -41,6 +42,7 @@ class SimGenerator(object):
 
     def run(self, sim_batch_size=100):
         current_count = 0
+        progress_bar = tqdm(total=self._sim_count)
         while current_count < self._sim_count:
             with futures.ProcessPoolExecutor(max_workers=self._worker_num) as executor:
                 _tasks = [executor.submit(sim_run_func, {
@@ -70,4 +72,6 @@ class SimGenerator(object):
                     file_path = self._get_sim_file_path(self._data_dir)
                     with open(file_path, 'w') as f:
                         pickle.dump(_results, f)
+            progress_bar.update(sim_batch_size)
             current_count += sim_batch_size
+        progress_bar.close()

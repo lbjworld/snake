@@ -2,6 +2,7 @@
 from __future__ import unicode_literals
 
 import gc
+from tqdm import tqdm
 from gym_trading.envs import FastTradingEnv
 
 from MCTS.mcts import MCTSBuilder
@@ -55,12 +56,18 @@ class SimTrajectory(object):
     def sim_run(self, rounds_per_step=100):
         done = False
         init_node = None
+        # progress_bar = tqdm(total=self._main_env.days)
         while not done:
             result_node = self._state_evaluation(
                 init_node=init_node, rounds_per_step=rounds_per_step)
+            if self._debug:
+                result_node.show_graph()
+                print result_node.q_table
             action, done = self._sim_step(result_node.q_table)
             # set init_node to action node
             init_node = result_node.set_next_root(action)
+            # progress_bar.update(1)
+        # progress_bar.close()
         final_reward = self._sim_history[-1]['reward']  # last reward as final reward
         for item in self._sim_history:
             item['final_reward'] = final_reward

@@ -18,7 +18,7 @@ TEST_SIZE = 300
 MAX_GENERATION = 100
 EPISODE_LENGTH = 30
 SIM_ROUNDS = 1000  # total sample size: SIM_ROUNDS * EPISODE_LENGTH
-SIM_BATCH_SIZE = 200
+SIM_BATCH_SIZE = 50
 SIM_ROUNDS_PER_STEP = 23
 IMPROVE_EPOCHS = 100
 VALID_ROUNDS = 100
@@ -82,19 +82,8 @@ def pipeline(base_model_name):
             epochs=IMPROVE_EPOCHS,
         )
         logger.info('policy improve finished')
-        # policy validation (compare between target and src)
-        result_model_name = policy_validator.validate(
-            valid_stocks=stock_codes[TRAIN_SIZE:TRAIN_SIZE+VALID_SIZE],
-            src=current_model_name,
-            target=target_model_name,
-            rounds=VALID_ROUNDS,
-            rounds_per_step=VALID_ROUNDS_PER_STEP,
-            worker_num=CPU_CORES,
-        )
-        if result_model_name != current_model_name:
-            # policy improved !!!
-            current_model_name = result_model_name
-            model_version += 1
+        current_model_name = target_model_name
+        model_version += 1
         logger.info('finished generation: {g}\ncurrent model: {mn}'.format(
             g=generation, mn=current_model_name
         ))

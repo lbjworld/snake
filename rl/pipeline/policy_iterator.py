@@ -36,7 +36,7 @@ def _load_sim_data(model_name, data_dir, target_reward, size=1000):
     for file_path in _data_files:
         with open(file_path, 'r') as f:
             records = pickle.load(f)
-            for r in records:
+            for r in np.random.shuffle(records):
                 _x.append(r['obs'])
                 p = r['q_table']
                 p_y.append(p)

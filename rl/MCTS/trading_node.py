@@ -34,13 +34,15 @@ class TradingNode(BaseNode):
     def get_episode_count(cls):
         return cls.episode_count
 
-    def __init__(self, state, up_edge=None, prior_ps=None):
+    def __init__(self, state, up_edge=None, prior_ps=None, level=0, episolon=0.25):
         self._state = state
         self._up_edge = up_edge
+        self._level = level
         action_size = len(self.env.action_options())
         if prior_ps is None:
             prior_ps = [1.0/action_size for i in range(action_size)]
-        self._down_edges = [Edge(prior_p=prior_ps[i], up=self) for i in range(action_size)]
+        noise_prior_ps = np.array(prior_ps) * (1 - episolon) + np.random.dirichlet((0.5, 0.5)) * episolon
+        self._down_edges = [Edge(prior_p=noise_prior_ps[i], up=self) for i in range(action_size)]
 
     def _get_klass(self):
         return self.__class__
@@ -90,7 +92,8 @@ class TradingNode(BaseNode):
         return bool(not self._up_edge)
 
     @property
-    def q_table(self, t=0.1):
+    def q_table(self, t=0.98):
+        # according to : agz nature
         # do actual play based on current node
         # return pai(action|state)
         _c = [np.power(e._visit_count, 1.0/t) for e in self._down_edges]
@@ -108,7 +111,12 @@ class TradingNode(BaseNode):
         # override class attribute 'env'
         self._get_klass().env = env
 
-    def _select(self, c_puct=0.9):
+    def _select(self, threshold_level=10):
+        #if self._level > self._get_klass().env.days - threshold_level:
+        #    return self._traverse_select()
+        return self._agz_select()
+
+    def _agz_select(self, c_puct=0.9):
         # refer to: PUCT algorithm
         total_visit_count = sum([e._visit_count for e in self._down_edges])
         vs = []
@@ -119,6 +127,17 @@ class TradingNode(BaseNode):
         if vs[1:] == vs[:-1]:
             return np.random.choice(range(len(vs)))
         return np.argmax(vs)
+
+    def _traverse_select(self):
+        # use traverse select in the last `threshold_level` levels
+        vcs = []
+        for action, e in enumerate(self._down_edges):
+            vcs.append(e._visit_count)
+            if not e._down_node:
+                return action
+        if vcs[1:] == vcs[:-1]:
+            return np.random.choice(range(len(vcs)))
+        return np.argmin(vcs)
 
     def _backup(self, v):
         current_node = self
@@ -142,7 +161,7 @@ class TradingNode(BaseNode):
             # evaluate with policy
             p, v = policy.evaluate(obs)
             # expand new node
-            next_node = NodeClass(state=obs, up_edge=next_edge, prior_ps=p)
+            next_node = NodeClass(state=obs, up_edge=next_edge, prior_ps=p, level=self._level+1)
             next_edge._down_node = next_node
             # backup
             next_node._backup(v)

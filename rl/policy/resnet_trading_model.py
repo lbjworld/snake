@@ -4,7 +4,9 @@ from __future__ import unicode_literals
 import logging
 import os
 import time
+import functools
 import numpy as np
+from sklearn import preprocessing
 
 from utils import get_latest_file
 
@@ -77,6 +79,9 @@ class ResnetTradingModel(object):
         self._model.save_weights(model_path)
 
     def _preprocess(self, batch_x):
+        # l2 normalize
+        #for i in range(batch_x.shape[0]):
+        #    batch_x[i] = preprocessing.normalize(batch_x[i], norm='l2')
         # extend to add channel dimension
         return np.expand_dims(batch_x, axis=3)
 
@@ -86,7 +91,7 @@ class ResnetTradingModel(object):
     def fit(self, train_x, y, epochs, batch_size=32):
         return self._model.fit(
             self._preprocess(train_x), y, epochs=epochs, batch_size=batch_size,
-            shuffle=True, validation_split=0.1
+            shuffle=True, # validation_split=0.1
         )
 
     def predict(self, x, debug=False):
