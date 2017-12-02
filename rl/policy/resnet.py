@@ -263,7 +263,7 @@ class ResnetBuilder(object):
             units=1, activation="linear", kernel_initializer="he_normal",
             kernel_regularizer=regularizer,
         )(value_header)
-        value_header = Activation("softmax", name='value_header')(value_header)
+        value_header = Activation("tanh", name='value_header')(value_header)
 
         model = Model(inputs=input, outputs=[policy_header, value_header])
         return model

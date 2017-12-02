@@ -40,7 +40,7 @@ def _load_sim_data(model_name, data_dir, target_reward, size=1000):
                 _x.append(r['obs'])
                 p = r['q_table']
                 p_y.append(p)
-                v = 1.0 if r['final_reward'] > target_reward else 0.0
+                v = r['final_reward'] - target_reward
                 v_y.append(v)
     logger.debug('sim data loaded, size({xs})'.format(xs=len(_x)))
     return np.array(_x), [np.array(p_y), np.array(v_y)]

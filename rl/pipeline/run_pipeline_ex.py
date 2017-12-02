@@ -2,12 +2,15 @@
 from __future__ import unicode_literals
 
 import logging
+import os
+import shutil
 from datetime import date, datetime, timedelta
 import tushare as ts
 
+from policy.utils import get_latest_file
 from pipeline.sim_generator import SimGenerator
 from pipeline.policy_iterator import PolicyIterator
-from pipeline.policy_validator import PolicyValidator
+# from pipeline.policy_validator import PolicyValidator
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +28,7 @@ VALID_ROUNDS = 100
 VALID_ROUNDS_PER_STEP = 23
 
 CPU_CORES = 2
-TARGET_MIN_VALUE=1.01
+TARGET_MIN_VALUE = 1.0
 
 
 def get_ipo_date(code, stock_basics):
@@ -55,7 +58,7 @@ def pipeline(base_model_name):
     assert(len(stock_codes) >= TRAIN_SIZE + VALID_SIZE + TEST_SIZE)
     generation = 0
     model_version = 0
-    policy_validator = PolicyValidator(episode_length=EPISODE_LENGTH)
+    # policy_validator = PolicyValidator(episode_length=EPISODE_LENGTH)
     policy_iter = PolicyIterator(episode_length=EPISODE_LENGTH, target_reward=TARGET_MIN_VALUE)
     current_model_name = gen_model_name(base_model_name, version=model_version)
     # build model and save v0 version
@@ -82,6 +85,8 @@ def pipeline(base_model_name):
             epochs=IMPROVE_EPOCHS,
         )
         logger.info('policy improve finished')
+        selected_model_file = get_latest_file('./tmp_models', target_model_name)
+        shutil.copy(os.path.join('./tmp_models', selected_model_file), './models')
         current_model_name = target_model_name
         model_version += 1
         logger.info('finished generation: {g}\ncurrent model: {mn}'.format(
