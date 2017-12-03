@@ -4,30 +4,38 @@ from __future__ import unicode_literals
 import logging
 import os
 import time
-import functools
 import numpy as np
-from sklearn import preprocessing
+# from sklearn import preprocessing
 
-from utils import get_latest_file
+from common.filelock import FileLock
 
 logger = logging.getLogger(__name__)
 
 
 class ResnetTradingModel(object):
+    CURRENT_MODEL_FILE = 'model.current'
+
     def __init__(
         self, name, model_dir='./models', load_model=False,
-        episode_days=200, feature_num=5
+        episode_days=200, feature_num=5, specific_model_name=None,
     ):
         self._model_dir = model_dir
         self._episode_days = episode_days
         self._feature_num = feature_num
         assert(name)
         self._name = name
+        self._specific_model_name = specific_model_name
         if load_model:
-            # load from model dir
-            self._model = self._load_latest_model(
-                name=name, model_dir=self._model_dir
-            )
+            if not self._specific_model_name:
+                # load current latest from model dir
+                self._model = self._load_latest_model(
+                    name=name, model_dir=self._model_dir
+                )
+            else:
+                # load specific model with `specific_model_name`
+                self._model = self._load_model(
+                    name=self._specific_model_name, model_dir=self._model_dir
+                )
         else:
             # build from scratch
             self._model = self._build_model(name=name)
@@ -57,13 +65,19 @@ class ResnetTradingModel(object):
 
     def _load_latest_model(self, model_dir, name):
         """load latest model by name"""
-        latest_name = get_latest_file(model_dir, name)
-        if not latest_name:
-            raise Exception('[ResnetTradingModel] latest model not found.')
-        model_path = os.path.join(model_dir, latest_name)
-        assert(model_path)
+        with FileLock(file_name=self.CURRENT_MODEL_FILE) as lock:
+            with open(lock.file_name, 'r') as f:
+                latest_name = f.read()
+                model_path = os.path.join(model_dir, latest_name)
+                _model = self._build_model(name)
+                logger.debug('loading trade model from [{p}]'.format(p=model_path))
+                _model.load_weights(model_path)
+                return _model
+
+    def _load_model(self, model_dir, name):
         _model = self._build_model(name)
-        logger.debug('loading trade model from [{p}]'.format(p=model_path))
+        model_path = os.path.join(model_dir, name)
+        logger.debug('loading specific trade model from [{p}]'.format(p=model_path))
         _model.load_weights(model_path)
         return _model
 
@@ -74,13 +88,15 @@ class ResnetTradingModel(object):
         assert(self._model)
         if not os.path.exists(model_dir):
             os.makedirs(model_dir)
-        model_path = os.path.join(model_dir, self._gen_model_name(name))
-        logger.debug('save trade model[{name}] to [{p}]'.format(name=name, p=model_path))
+        new_model_name = self._gen_model_name(name)
+        model_path = os.path.join(model_dir, new_model_name)
         self._model.save_weights(model_path)
+        logger.debug('save trade model[{name}] to [{p}]'.format(name=name, p=model_path))
+        return new_model_name
 
     def _preprocess(self, batch_x):
         # l2 normalize
-        #for i in range(batch_x.shape[0]):
+        # for i in range(batch_x.shape[0]):
         #    batch_x[i] = preprocessing.normalize(batch_x[i], norm='l2')
         # extend to add channel dimension
         return np.expand_dims(batch_x, axis=3)
@@ -91,7 +107,7 @@ class ResnetTradingModel(object):
     def fit(self, train_x, y, epochs, batch_size=32):
         return self._model.fit(
             self._preprocess(train_x), y, epochs=epochs, batch_size=batch_size,
-            shuffle=True, # validation_split=0.1
+            shuffle=True,  # validation_split=0.1
         )
 
     def predict(self, x, debug=False):
