@@ -25,7 +25,7 @@ VALID_ROUNDS = 100
 VALID_ROUNDS_PER_STEP = 23
 
 CPU_CORES = 2
-TARGET_MIN_VALUE=1.01
+TARGET_MIN_VALUE = 1.0
 
 
 def get_ipo_date(code, stock_basics):

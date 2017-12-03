@@ -19,11 +19,11 @@ def _init_model_func(model_dir, model_name, episode_length):
         load_model=False,
         episode_days=episode_length,
     )
-    model.save_model(model_dir, model_name)
-    return True
+    model_file_name = model.save_model(model_dir, model_name)
+    return model_file_name
 
 
-def _load_sim_data(model_name, data_dir, target_reward, size=1000):
+def _load_sim_data(model_name, data_dir, target_reward, size=10000):
     # TODO: add size limit
     # load sim data from data_dir
     _data_files = []
@@ -36,50 +36,57 @@ def _load_sim_data(model_name, data_dir, target_reward, size=1000):
     for file_path in _data_files:
         with open(file_path, 'r') as f:
             records = pickle.load(f)
-            for r in np.random.shuffle(records):
+            np.random.shuffle(records)
+            for r in records:
                 _x.append(r['obs'])
                 p = r['q_table']
                 p_y.append(p)
                 v = r['final_reward'] - target_reward
                 v_y.append(v)
     logger.debug('sim data loaded, size({xs})'.format(xs=len(_x)))
-    return np.array(_x), [np.array(p_y), np.array(v_y)]
+    random_indices = np.random.choice(range(len(_x)), size)
+    logger.debug('random choose size({s})'.format(s=size))
+    return (
+        np.take(_x, random_indices, axis=0),
+        [np.take(p_y, random_indices, axis=0), np.take(v_y, random_indices, axis=0)]
+    )
 
 
 def _improve_func(
-    model_dir, tmp_model_dir, data_dir, src, target, episode_length, batch_size, epochs,
-    target_reward,
+    model_dir, data_dir, model_name, episode_length, batch_size, epochs,
+    target_reward, total_size=3000,
 ):
     from policy.resnet_trading_model import ResnetTradingModel
     # load src model
     model = ResnetTradingModel(
-        name=src,
+        name=model_name,
         model_dir=model_dir,
         load_model=True,
         episode_days=episode_length
     )
     # load train data
-    train_x, y = _load_sim_data(model_name=src, data_dir=data_dir, target_reward=target_reward)
+    train_x, y = _load_sim_data(
+        model_name=model_name, data_dir=data_dir, target_reward=target_reward, size=total_size
+    )
     logger.debug(
         'train_x:{xs}, policy_y:{pys}, value_y:{vys}'.format(
             xs=train_x.shape, pys=y[0].shape, vys=y[1].shape
         )
     )
     # training
+    # TODO: fix here, use batch train
     model.fit(train_x, y, epochs=epochs, batch_size=batch_size)
-    # save model in tmp_model_dir
-    model.save_model(tmp_model_dir, target)
-    return True
+    # save model in model_dir
+    model_file_name = model.save_model(model_dir, model_name)
+    return model_file_name
 
 
 class PolicyIterator(object):
 
     def __init__(
-        self, episode_length, data_dir='./sim_data', model_dir='./models',
-        tmp_model_dir='./tmp_models', target_reward=1.0,
+        self, episode_length, data_dir='./sim_data', model_dir='./models', target_reward=1.0,
     ):
         self._episode_length = episode_length
-        self._tmp_model_dir = tmp_model_dir
         self._model_dir = model_dir
         self._data_dir = data_dir
         self._target_reward = target_reward
@@ -92,17 +99,17 @@ class PolicyIterator(object):
             res = f.result()
             if not res:
                 logger.error('init_model error:{e}'.format(e=f.exception()))
-                return False
-            return True
+                return None
+            return res
 
-    def improve(self, src, target, batch_size=32, epochs=100):
+    def improve(self, model_name, batch_size=32, epochs=100):
         with futures.ProcessPoolExecutor(max_workers=1) as executor:
             f = executor.submit(
-                _improve_func, self._model_dir, self._tmp_model_dir, self._data_dir, src, target,
+                _improve_func, self._model_dir, self._data_dir, model_name,
                 self._episode_length, batch_size, epochs, self._target_reward,
             )
-            res = f.result()
-            if not res:
+            new_model_file_name = f.result()
+            if not new_model_file_name:
                 logger.error('improve_model error:{e}'.format(e=f.exception()))
-                return False
-            return True
+                return None
+            return new_model_file_name

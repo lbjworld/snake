@@ -20,6 +20,7 @@ def sim_run_func(params):
     model_dir = params['model_dir']
     model_feature_num = params['model_feature_num']
     sim_explore_rate = params['sim_explore_rate']
+    specific_model_name = params.get('specific_model_name')
     debug = params.get('debug', False)
     # create env
     _env = FastTradingEnv(name=stock_name, days=episode_length)
@@ -31,7 +32,8 @@ def sim_run_func(params):
         model_dir=model_dir,
         load_model=True,
         episode_days=episode_length,
-        feature_num=model_feature_num
+        feature_num=model_feature_num,
+        specific_model_name=specific_model_name,
     )
     logger.debug('loaded model[{d}/{name}]'.format(d=model_dir, name=model_name))
     _policy = ModelTradingPolicy(action_options=_env.action_options(), model=_model, debug=debug)
