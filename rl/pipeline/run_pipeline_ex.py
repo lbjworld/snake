@@ -97,5 +97,5 @@ def pipeline(base_model_name):
 
 if __name__ == '__main__':
     assert(logger)
-    logging.basicConfig(filename='pipeline.log', level=logging.DEBUG)
+    logging.basicConfig(filename='pipeline.log', level=logging.INFO)
     pipeline(base_model_name='resnet_18')

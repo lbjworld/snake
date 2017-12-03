@@ -2,14 +2,12 @@
 from __future__ import unicode_literals
 
 import numpy as np
-from ete3 import Tree
 
 from base_node import BaseNode
 
 
 class Edge(object):
     def __init__(self, prior_p, up, down=None):
-        assert(up)
         # relation data
         self._up_node = up
         self._down_node = down
@@ -41,11 +39,9 @@ class TradingNode(BaseNode):
         action_size = len(self.env.action_options())
         if prior_ps is None:
             prior_ps = [1.0/action_size for i in range(action_size)]
-        noise_prior_ps = np.array(prior_ps) * (1 - episolon) + np.random.dirichlet((0.5, 0.5)) * episolon
+        noise_prior_ps = np.array(prior_ps) * (1 - episolon) + \
+            np.random.dirichlet((0.5, 0.5)) * episolon
         self._down_edges = [Edge(prior_p=noise_prior_ps[i], up=self) for i in range(action_size)]
-
-    def _get_klass(self):
-        return self.__class__
 
     # DEBUG helper
     #############################
@@ -62,6 +58,7 @@ class TradingNode(BaseNode):
                 self.draw_graph(down_edge._down_node, c)
 
     def show_graph(self, name=None):
+        from ete3 import Tree
         t = Tree()
         self.draw_graph(self, t)
         # if name:
@@ -109,21 +106,21 @@ class TradingNode(BaseNode):
 
     def set_env(self, env):
         # override class attribute 'env'
-        self._get_klass().env = env
+        self.__class__.env = env
 
     def _select(self, threshold_level=10):
-        #if self._level > self._get_klass().env.days - threshold_level:
-        #    return self._traverse_select()
+        if self._level > self.__class__.env.days - threshold_level:
+            return self._traverse_select()
         return self._agz_select()
 
     def _agz_select(self, c_puct=0.9):
         # refer to: PUCT algorithm
         total_visit_count = sum([e._visit_count for e in self._down_edges])
-        vs = []
-        for e in self._down_edges:
-            v = e._mean_reward + c_puct * e._action_probability * \
-                np.sqrt(total_visit_count * 1.0) / (1.0 + e._visit_count)
-            vs.append(v)
+        vs = [
+            e._mean_reward + c_puct * e._action_probability *
+            np.sqrt(total_visit_count * 1.0) / (1.0 + e._visit_count)
+            for e in self._down_edges
+        ]
         if vs[1:] == vs[:-1]:
             return np.random.choice(range(len(vs)))
         return np.argmax(vs)
@@ -152,10 +149,10 @@ class TradingNode(BaseNode):
             Returns:
                 TradingNode: next node if exist (None if done)
         """
-        NodeClass = self._get_klass()
-        action = self._select()
+        NodeClass = self.__class__
+        action = self._agz_select()
         # run in env
-        obs, reward, done, info = NodeClass.env.step(action)
+        obs, reward, done, _ = NodeClass.env.step(action)
         next_edge = self._down_edges[action]
         if not next_edge._down_node:
             # evaluate with policy
