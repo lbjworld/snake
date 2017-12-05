@@ -1,7 +1,7 @@
 # coding: utf-8
 from __future__ import unicode_literals
 
-from tqdm import tqdm
+# from tqdm import tqdm
 from gym_trading.envs import FastTradingEnv
 
 from MCTS.mcts import MCTSBuilder
@@ -19,6 +19,7 @@ class SimTrajectory(object):
 
         # change every step of trajectory
         self._sim_history = []
+        self._tmp_env = FastTradingEnv(name=self._main_env.name, days=self._main_env.days)
 
     @property
     def history(self):
@@ -26,9 +27,8 @@ class SimTrajectory(object):
 
     def _state_evaluation(self, init_node=None, rounds_per_step=100):
         # TODO: optimize when nearly end of episode, change from mcts to traverse search
-        tmp_env = FastTradingEnv(name=self._main_env.name, days=self._main_env.days)
         # do MCTS
-        mcts_block = MCTSBuilder(tmp_env, init_node=init_node, debug=self._debug)
+        mcts_block = MCTSBuilder(self._tmp_env, init_node=init_node, debug=self._debug)
         root_node = mcts_block.run_batch(
             policy=self._exploit_policy,
             env_snapshot=self._main_env.snapshot(),

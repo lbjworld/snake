@@ -1,8 +1,4 @@
 # coding: utf-8
-import gym
-from gym import spaces
-from gym.utils import seeding
-
 import logging
 import numpy as np
 import pandas as pd
