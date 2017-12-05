@@ -28,9 +28,7 @@ class ResnetTradingModel(object):
         if load_model:
             if not self._specific_model_name:
                 # load current latest from model dir
-                self._model = self._load_latest_model(
-                    name=name, model_dir=self._model_dir
-                )
+                self._model = self._load_latest_model(model_dir=self._model_dir)
             else:
                 # load specific model with `specific_model_name`
                 self._model = self._load_model(
@@ -57,19 +55,25 @@ class ResnetTradingModel(object):
             optimizer = keras.optimizers.SGD(lr=0.01, momentum=0.9)
         _model.compile(
             optimizer=optimizer,
-            loss=['cosine_proximity', 'mean_squared_error'],
-            metrics=['accuracy'],
+            loss={
+                'policy_header': 'cosine_proximity',
+                'value_header': 'mean_squared_error',
+            },
+            metrics={
+                'policy_header': ['mse', 'acc'],
+                'value_header': ['mse'],
+            },
         )
         logger.debug('compiled trade model[{name}]'.format(name=name))
         return _model
 
-    def _load_latest_model(self, model_dir, name):
+    def _load_latest_model(self, model_dir):
         """load latest model by name"""
         with FileLock(file_name=self.CURRENT_MODEL_FILE) as lock:
             with open(lock.file_name, 'r') as f:
-                latest_name = f.read()
+                latest_name = f.read().strip()
                 model_path = os.path.join(model_dir, latest_name)
-                _model = self._build_model(name)
+                _model = self._build_model(latest_name)
                 logger.debug('loading trade model from [{p}]'.format(p=model_path))
                 _model.load_weights(model_path)
                 return _model
