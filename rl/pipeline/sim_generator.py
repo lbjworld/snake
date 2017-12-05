@@ -40,10 +40,12 @@ class SimGenerator(object):
         return os.path.join(data_dir, file_name)
 
     def run(self, sim_batch_size=100, worker_num=4):
+        episode_length = self._input_shape[0]
+        batch_data_length = sim_batch_size * episode_length
         progress_bar = tqdm(total=self._sim_count)
         for idx in range(0, self._sim_count, sim_batch_size):
             _results = []
-            while len(_results) < sim_batch_size:
+            while len(_results) < batch_data_length:
                 with futures.ProcessPoolExecutor(max_workers=worker_num) as executor:
                     _tasks = [executor.submit(sim_run_func, {
                         'stock_name': random.choice(self._train_stocks),
@@ -67,7 +69,7 @@ class SimGenerator(object):
                         logger.error('[SIM] some futures timeout')
 
             # save results to file
-            _results = _results[:sim_batch_size]
+            _results = _results[:batch_data_length]
             file_path = self._get_sim_file_path(self._data_dir)
             with open(file_path, 'w') as f:
                 pickle.dump(_results, f)
