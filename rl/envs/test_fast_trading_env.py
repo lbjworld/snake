@@ -1,6 +1,7 @@
-# import gym
+# coding: utf-8
 import unittest
 import timeit
+import numpy as np
 
 import fast_trading_env
 
@@ -18,25 +19,18 @@ class FastTradingEnvTestCase(unittest.TestCase):
             done = False
             count = 0
             while not done:
-                action = self.env.action_space.sample()  # random
+                action = np.random.choice(self.env.action_options, 1)  # random
                 observation, reward, done, info = self.env.step(action)
                 self.assertTrue(reward >= 0.0)
                 count += 1
         self.assertEqual(count, self.days)
 
-    def test_run_strat(self):
-        self.assertTrue(self.env)
-        episodes = 10
-        buyhold = lambda x, y: 1
-        df = self.env.run_strats(buyhold, episodes)
-        self.assertTrue(df.shape)
-
     def test_performance(self):
-        setup = """import fast_trading_env; env = fast_trading_env.FastTradingEnv(name='000333.SZ', days=200)"""
+        setup = """import numpy, fast_trading_env; env = fast_trading_env.FastTradingEnv(name='000333.SZ', days=200)"""
         code = """env.reset()
 done = False
 while not done:
-    action = env.action_space.sample()
+    action = numpy.random.choice(env.action_options, 1)
     obs, reward, done, info = env.step(action)
 """
         count = 100
