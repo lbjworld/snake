@@ -1,107 +1,68 @@
 # coding: utf-8
 import logging
 import numpy as np
-import pandas as pd
 
 from data_loader import data_loader
 
 logger = logging.getLogger(__name__)
 
 
-class YahooEnvSrc(object):
-    '''
-    Yahoo-based implementation of a TradingEnv's data source.
-
-    Pulls data from Yahoo data source, preps for use by TradingEnv and then
-    acts as data provider for each new episode.
-    '''
+class FastTradingEnv(object):
 
     VOLUME_SCALE_FACTOR = 1000000.0
 
-    def __init__(self, name, days, use_adjust_close=True):
+    def __init__(self, name, days, use_adjust_close=True, trading_cost_bps=1e-3):
         self.name = name
         self.days = days
 
         data_df = data_loader(self.name)
         if data_df.empty:
-            raise Exception('load data error')
-        logger.debug('[{name}] data loaded'.format(name=self.name))
+            raise Exception('load stock[{name}] data error'.format(name=self.name))
+        logger.debug('stock[{name}] data loaded'.format(name=self.name))
 
         close_column = 'Adj Close' if use_adjust_close else 'Close'
         data_df = data_df[['Open', 'High', 'Low', close_column, 'Volume']]
         data_df.columns = ['open', 'high', 'low', 'close', 'volume']
         data_df = data_df[~np.isnan(data_df.volume)]  # 跳过所有停牌日
         self.pct_change = data_df.pct_change().fillna(0.0) + 1.0  # 计算变化量
-        data_df.volume = data_df.volume / YahooEnvSrc.VOLUME_SCALE_FACTOR
+        data_df.volume = data_df.volume / FastTradingEnv.VOLUME_SCALE_FACTOR
         self.data = data_df
-        self.reset()
 
-    def reset(self):
-        # we want contiguous data
-        high = len(self.data.index)-self.days
-        if high <= 1:
-            raise Exception('data too short')
-        self.idx = np.random.randint(low=1, high=high)
-        self.step = 0
-
-    def _step(self):
-        current_idx = self.idx + self.step
-        if current_idx:
-            visible_data = self.data[self.idx:current_idx].as_matrix()
-            if self.days <= self.step:
-                # last one
-                history = visible_data
-            else:
-                empty_data = np.zeros((self.days-self.step, len(self.data.columns)))
-                history = np.concatenate((visible_data, empty_data), axis=0)
-        else:
-            # first one
-            history = np.zeros((self.days-self.step, len(self.data.columns)))
-        assert(history.shape == (self.days, len(self.data.columns)))
-        obs = {
-            'pct_change': self.pct_change.iloc[current_idx].as_matrix(),
-            'history': history,
-        }
-        self.step += 1
-        done = self.step > self.days
-        return obs, done
-
-    def to_df(self):
-        return self.data[self.idx:self.idx+self.step+1]
-
-    def snapshot(self):
-        return {
-            'step': self.step,
-            'idx': self.idx,
-            'name': self.name,
-            'days': self.days,
-        }
-
-    def recover(self, snapshot):
-        assert('step' in snapshot and 'idx' in snapshot and 'name' in snapshot)
-        assert(snapshot['name'] == self.name)
-        self.step = snapshot['step']
-        self.idx = snapshot['idx']
-
-
-class TradingSim(object):
-    """ Implements core trading simulator for single-instrument univ """
-
-    def __init__(self, steps, trading_cost_bps=1e-3):
-        # invariant for object life
         self.trading_cost_pct_change = 1.0 - trading_cost_bps
-        self.steps = steps
-        # change every step
-        self.step = 0
         self.actions = np.zeros(self.steps)
         self.navs = np.ones(self.steps)
 
+        self.reset()
+
+    @property
+    def action_options(self):
+        return [0, 1]
+
     def reset(self):
+        # we want continuous data
+        high = len(self.data.index) - self.days
+        if high <= 1:
+            raise Exception('stock[{name}] data too short'.format(name=self.name))
+        self.idx = np.random.randint(low=1, high=high)
         self.step = 0
         self.actions.fill(0)
         self.navs.fill(1)
 
-    def _step(self, action, nav_pct_change, done=False):
+    def step(self, action):
+        assert action in self.action_options, "%r (%s) invalid" % (action, type(action))
+        # data step
+        ###############################
+        current_idx = self.idx + self.step
+        visible_data = np.zeros((self.days, len(self.data.columns)))
+        if self.step > 0:
+            current_data = self.data[self.idx:current_idx].as_matrix()
+            visible_data[:current_data.shape[0]] += current_data
+        obs = visible_data
+        nav_pct_change = self.pct_change.iat[current_idx, 3]  # close pct change
+        done = bool(self.step >= self.days)
+
+        # sim step
+        ###############################
         reward = 0.0
         # record action
         self.actions[self.step] = action
@@ -118,103 +79,28 @@ class TradingSim(object):
             reward = self.navs[self.step] * self.trading_cost_pct_change
         info = {
             'step': self.step,
-            'reward': reward,
+            'reward': reward - 1.0,
             'nav': self.navs[self.step],
         }
 
         self.step += 1
-        return reward, info
-
-    def to_df(self):
-        """returns internal state in new dataframe """
-        cols = [
-            'action', 'nav',
-        ]
-        df = pd.DataFrame({
-            'action': self.actions,  # today's action (from agent)
-            'nav': self.navs,  # BOD Net Asset Value (NAV)
-        }, columns=cols)[:self.step+1]
-        return df
+        return obs, reward, done, info
 
     def snapshot(self):
         return {
+            'idx': self.idx,
+            'name': self.name,
+            'days': self.days,
             'step': self.step,
-            'actions': np.array(self.actions, copy=True),
-            'navs': np.array(self.navs, copy=True),
+            'actions': self.actions,
+            'navs': self.navs,
         }
 
     def recover(self, snapshot, copy=True):
-        assert('step' in snapshot and 'actions' in snapshot and 'navs' in snapshot)
+        assert(snapshot['name'] == self.name)
+        self.idx = snapshot['idx']
+        self.name = snapshot['name']
+        self.days = snapshot['days']
         self.step = snapshot['step']
         self.actions = np.array(snapshot['actions'], copy=True) if copy else snapshot['actions']
         self.navs = np.array(snapshot['navs'], copy=True) if copy else snapshot['navs']
-
-
-class FastTradingEnv(object):
-    """This gym implements a simple trading environment for reinforcement learning.
-
-    The gym provides daily observations based on real market data pulled
-    from Yahoo on, by default, the SPY etf. An episode is defined as 252
-    contiguous days sampled from the overall dataset. Each day is one
-    'step' within the gym and for each step, the algo has a choice:
-
-    FLAT (0)
-    LONG (1)
-
-    If you trade, you will be charged, by default, 1e-3 BPS of the size of
-    your trade.
-
-    At the beginning of your episode, you are allocated 1 unit of
-    cash. This is your starting Net Asset Value (NAV). If your NAV drops
-    to 0, your episode is over and you lose.
-
-    *NOT IMPLEMENT* The trading env will track a buy-and-hold strategy which will act as
-    the benchmark for the game.
-    """
-
-    def __init__(self, name, days):
-        self.name = name
-        self.days = days
-        self.src = YahooEnvSrc(name=self.name, days=self.days)
-        self.sim = TradingSim(steps=self.days, trading_cost_bps=1e-3)
-        self.action_space = spaces.Discrete(2)
-        # self.observation_space = spaces.Box(self.src.min_values, self.src.max_values)
-        self.reset()
-
-    def _configure(self, display=None):
-        self.display = display
-
-    def _seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
-
-    def step(self, action):
-        assert self.action_space.contains(action), "%r (%s) invalid" % (action, type(action))
-        obs, done = self.src._step()
-        close_pct_change = obs['pct_change'][3]
-        reward, info = self.sim._step(action, close_pct_change, done=done)
-        if info['nav'] <= 0.0:
-            done = True
-        return obs['history'], reward, done, info
-
-    def reset(self):
-        self.src.reset()
-        self.sim.reset()
-        return self.src._step()[0]
-
-    def render(self, mode='human', close=False):
-        pass
-
-    def action_options(self):
-        return range(2)
-
-    def snapshot(self):
-        return {
-            'src': self.src.snapshot(),
-            'sim': self.sim.snapshot(),
-        }
-
-    def recover(self, snapshot):
-        assert('src' in snapshot and 'sim' in snapshot)
-        self.src.recover(snapshot['src'])
-        self.sim.recover(snapshot['sim'])
