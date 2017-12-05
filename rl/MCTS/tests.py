@@ -4,9 +4,9 @@ from __future__ import unicode_literals
 import unittest
 import cProfile
 from ete3 import Tree
-from gym_trading.envs import FastTradingEnv
 
 from common.utils import Profiling
+from envs.fast_trading_env import FastTradingEnv
 from utils import klass_factory, fast_moving
 from trading_policy import RandomTradingPolicy, HoldTradingPolicy
 from trading_node import TradingNode

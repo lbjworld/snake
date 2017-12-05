@@ -102,7 +102,7 @@ class SimDataSet(object):
             r = self._data_pool[select_idx]
             _x[idx] = r['obs']
             p_y[idx] = r['q_table']
-            v_y[idx] = r['final_reward'] - 1.0
+            v_y[idx] = r['final_reward']
         return np.array(_x), [np.array(p_y), np.array(v_y)]
 
     def generator(self, batch_size=2048):

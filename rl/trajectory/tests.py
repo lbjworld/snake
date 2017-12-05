@@ -2,7 +2,7 @@
 from __future__ import unicode_literals
 
 import unittest
-from gym_trading.envs import FastTradingEnv
+from envs.fast_trading_env import FastTradingEnv
 
 from policy.resnet_trading_model import ResnetTradingModel
 from policy.model_policy import ModelTradingPolicy

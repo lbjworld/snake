@@ -2,7 +2,8 @@
 from __future__ import unicode_literals
 
 import logging
-from gym_trading.envs import FastTradingEnv
+
+from envs.fast_trading_env import FastTradingEnv
 
 logger = logging.getLogger(__name__)
 

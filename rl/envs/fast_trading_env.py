@@ -23,18 +23,21 @@ class FastTradingEnv(object):
         close_column = 'Adj Close' if use_adjust_close else 'Close'
         data_df = data_df[['Open', 'High', 'Low', close_column, 'Volume']]
         data_df.columns = ['open', 'high', 'low', 'close', 'volume']
-        data_df = data_df[~np.isnan(data_df.volume)]  # 跳过所有停牌日
+        data_df = data_df[(~np.isnan(data_df.volume)) & (data_df.volume > 1e-9)]  # 跳过所有停牌日
         self.pct_change = data_df.pct_change().fillna(0.0) + 1.0  # 计算变化量
         data_df.volume = data_df.volume / FastTradingEnv.VOLUME_SCALE_FACTOR
         self.data = data_df
 
         self.trading_cost_pct_change = 1.0 - trading_cost_bps
-        self.actions = np.zeros(self.steps)
-        self.navs = np.ones(self.steps)
+        self._actions = np.zeros(self.days)
+        self._navs = np.ones(self.days)
 
         self.reset()
 
     @property
+    def action_space(self):
+        return [0, 1]
+
     def action_options(self):
         return [0, 1]
 
@@ -43,64 +46,65 @@ class FastTradingEnv(object):
         high = len(self.data.index) - self.days
         if high <= 1:
             raise Exception('stock[{name}] data too short'.format(name=self.name))
-        self.idx = np.random.randint(low=1, high=high)
-        self.step = 0
-        self.actions.fill(0)
-        self.navs.fill(1)
+        self._idx = np.random.randint(low=1, high=high)
+        self._step = 0
+        self._actions.fill(0)
+        self._navs.fill(1)
 
     def step(self, action):
-        assert action in self.action_options, "%r (%s) invalid" % (action, type(action))
+        assert action in self.action_space, "%r (%s) invalid" % (action, type(action))
         # data step
         ###############################
-        current_idx = self.idx + self.step
+        data_step = self._step + 1
+        current_idx = self._idx + data_step
         visible_data = np.zeros((self.days, len(self.data.columns)))
-        if self.step > 0:
-            current_data = self.data[self.idx:current_idx].as_matrix()
-            visible_data[:current_data.shape[0]] += current_data
+        current_data = self.data[self._idx:current_idx].as_matrix()
+        visible_data[:current_data.shape[0]] += current_data
         obs = visible_data
         nav_pct_change = self.pct_change.iat[current_idx, 3]  # close pct change
-        done = bool(self.step >= self.days)
+        done = bool(data_step >= self.days)
 
         # sim step
         ###############################
         reward = 0.0
         # record action
-        self.actions[self.step] = action
-        last_nav = 1.0 if self.step == 0 else self.navs[self.step-1]
+        self._actions[self._step] = action
+        last_nav = 1.0 if self._step == 0 else self._navs[self._step-1]
         # record nav (只在LONG position情况下累积nav)
-        self.navs[self.step] = last_nav * (nav_pct_change if action == 1 else 1.0)
+        self._navs[self._step] = last_nav * (nav_pct_change if action == 1 else 1.0)
 
-        if not self.step == 0:
+        if not self._step == 0:
             # trading fee for changing trade position
-            if abs(self.actions[self.step-1] - action) > 0:
-                reward = self.navs[self.step] * self.trading_cost_pct_change
+            if abs(self._actions[self._step-1] - action) > 0:
+                reward = self._navs[self._step] * self.trading_cost_pct_change
         if done:
             # episode finished, force sold
-            reward = self.navs[self.step] * self.trading_cost_pct_change
+            reward = self._navs[self._step] * self.trading_cost_pct_change
         info = {
-            'step': self.step,
+            'step': self._step,
             'reward': reward - 1.0,
-            'nav': self.navs[self.step],
+            'nav': self._navs[self._step],
         }
+        # TODO: add shortcut for low NAV
 
-        self.step += 1
+        self._step += 1
         return obs, reward, done, info
 
     def snapshot(self):
         return {
-            'idx': self.idx,
+            'idx': self._idx,
             'name': self.name,
             'days': self.days,
-            'step': self.step,
-            'actions': self.actions,
-            'navs': self.navs,
+            'step': self._step,
+            'actions': self._actions,
+            'navs': self._navs,
         }
 
     def recover(self, snapshot, copy=True):
         assert(snapshot['name'] == self.name)
-        self.idx = snapshot['idx']
+        self._idx = snapshot['idx']
         self.name = snapshot['name']
         self.days = snapshot['days']
-        self.step = snapshot['step']
-        self.actions = np.array(snapshot['actions'], copy=True) if copy else snapshot['actions']
-        self.navs = np.array(snapshot['navs'], copy=True) if copy else snapshot['navs']
+        self._step = snapshot['step']
+        self._actions = np.array(snapshot['actions'], copy=True) if copy else snapshot['actions']
+        self._navs = np.array(snapshot['navs'], copy=True) if copy else snapshot['navs']

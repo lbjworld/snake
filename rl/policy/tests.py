@@ -2,8 +2,8 @@
 from __future__ import unicode_literals
 
 import unittest
-from gym_trading.envs import FastTradingEnv
 
+from envs.fast_trading_env import FastTradingEnv
 from MCTS.mcts import MCTSBuilder
 from resnet_trading_model import ResnetTradingModel
 from model_policy import ModelTradingPolicy

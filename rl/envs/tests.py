@@ -3,13 +3,13 @@ import unittest
 import timeit
 import numpy as np
 
-import fast_trading_env
+from envs.fast_trading_env import FastTradingEnv
 
 
 class FastTradingEnvTestCase(unittest.TestCase):
     def setUp(self):
         self.days = 200
-        self.env = fast_trading_env.FastTradingEnv(name='000333.SZ', days=self.days)
+        self.env = FastTradingEnv(name='000333.SZ', days=self.days)
 
     def test_normal_run(self):
         self.assertTrue(self.env)
@@ -19,18 +19,18 @@ class FastTradingEnvTestCase(unittest.TestCase):
             done = False
             count = 0
             while not done:
-                action = np.random.choice(self.env.action_options, 1)  # random
+                action = np.random.choice(self.env.action_options(), 1)  # random
                 observation, reward, done, info = self.env.step(action)
                 self.assertTrue(reward >= 0.0)
                 count += 1
         self.assertEqual(count, self.days)
 
     def test_performance(self):
-        setup = """import numpy, fast_trading_env; env = fast_trading_env.FastTradingEnv(name='000333.SZ', days=200)"""
+        setup = """import numpy; from envs.fast_trading_env import FastTradingEnv; env = FastTradingEnv(name='000333.SZ', days=200)"""
         code = """env.reset()
 done = False
 while not done:
-    action = numpy.random.choice(env.action_options, 1)
+    action = numpy.random.choice(env.action_options(), 1)
     obs, reward, done, info = env.step(action)
 """
         count = 100

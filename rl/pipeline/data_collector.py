@@ -4,7 +4,8 @@ from __future__ import unicode_literals
 import logging
 from concurrent import futures
 import tushare as ts
-from gym_trading.envs import FastTradingEnv
+
+from envs.fast_trading_env import FastTradingEnv
 
 logger = logging.getLogger(__name__)
 
@@ -47,6 +48,6 @@ class DataCollector(object):
 
 if __name__ == '__main__':
     assert(logger)
-    logging.basicConfig(filename='data_collector.log', level=logging.DEBUG)
+    logging.basicConfig(filename='data_collector.log', level=logging.INFO)
     dc = DataCollector()
     dc.run()

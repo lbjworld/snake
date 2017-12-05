@@ -2,8 +2,8 @@
 from __future__ import unicode_literals
 
 # from tqdm import tqdm
-from gym_trading.envs import FastTradingEnv
 
+from envs.fast_trading_env import FastTradingEnv
 from MCTS.mcts import MCTSBuilder
 from sim_policy import SimPolicy
 
