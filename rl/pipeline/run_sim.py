@@ -42,9 +42,8 @@ def evaluation(base_model_name):
             data_dir=settings.SIM_DATA_DIR,
             sim_count=settings.SIM_ROUNDS,
             rounds_per_step=settings.SIM_ROUNDS_PER_STEP,
-            worker_num=settings.CPU_CORES,
         )
-        sim_gen.run(sim_batch_size=settings.SIM_BATCH_SIZE)
+        sim_gen.run(sim_batch_size=settings.SIM_BATCH_SIZE, worker_num=settings.CPU_CORES)
         logger.info('finished generation: {g}\ncurrent model: {mn}'.format(
             g=generation, mn=base_model_name
         ))

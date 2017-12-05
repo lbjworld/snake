@@ -19,8 +19,7 @@ class SimGenerator(object):
 
     def __init__(
         self, train_stocks, model_name, explore_rate, input_shape, model_dir,
-        data_dir, debug=False, worker_num=4, sim_count=2500, rounds_per_step=1000,
-        worker_timeout=600,
+        data_dir, debug=False, sim_count=2500, rounds_per_step=1000, worker_timeout=600,
     ):
         assert(len(input_shape) == 2)
         self._model_name = model_name
@@ -31,7 +30,6 @@ class SimGenerator(object):
         self._data_dir = data_dir
         self._sim_count = sim_count
         self._rounds_per_step = rounds_per_step
-        self._worker_num = worker_num
         self._worker_timeout = worker_timeout
         self._debug = debug
 
@@ -41,11 +39,11 @@ class SimGenerator(object):
         file_name = '{mn}.{ts}.pkl'.format(mn=self._model_name, ts=int(time.time()))
         return os.path.join(data_dir, file_name)
 
-    def run(self, sim_batch_size=100):
+    def run(self, sim_batch_size=10, worker_num=4):
         current_count = 0
         progress_bar = tqdm(total=self._sim_count)
         while current_count < self._sim_count:
-            with futures.ProcessPoolExecutor(max_workers=self._worker_num) as executor:
+            with futures.ProcessPoolExecutor(max_workers=worker_num) as executor:
                 _tasks = [executor.submit(sim_run_func, {
                     'stock_name': random.choice(self._train_stocks),
                     'input_shape': self._input_shape,
