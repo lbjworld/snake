@@ -7,13 +7,14 @@ import time
 import numpy as np
 # from sklearn import preprocessing
 
+from common import settings
 from common.filelock import FileLock
 
 logger = logging.getLogger(__name__)
 
 
 class ResnetTradingModel(object):
-    CURRENT_MODEL_FILE = 'model.current'
+    CURRENT_MODEL_FILE = settings.CURRENT_MODEL_FILE
 
     def __init__(
         self, name, model_dir='./models', load_model=False,

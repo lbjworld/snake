@@ -1,12 +1,13 @@
 # coding: utf-8
 from __future__ import unicode_literals
 
+import os
 import logging
-import time
 import random
 from concurrent import futures
-from common.filelock import FileLock
 
+from common import settings
+from common.filelock import FileLock
 from trajectory.sim_run import sim_run_func
 
 logger = logging.getLogger(__name__)
@@ -14,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class PolicyValidator(object):
 
-    CURRENT_MODEL_FILE = 'model.current'
+    CURRENT_MODEL_FILE = settings.CURRENT_MODEL_FILE
 
     def __init__(
         self, episode_length, explore_rate=1e-01, data_dir='./sim_data', model_dir='./models',
@@ -93,17 +94,17 @@ class PolicyValidator(object):
 
     def find_latest_model_name(self, interval_seconds=600):
         """watch model dir and return new added model name"""
-        while True:
-            current_model_path = None
-            if os.path.exists(self.CURRENT_MODEL_FILE):
-                with FileLock(file_name=self.CURRENT_MODEL_FILE) as lock:
-                    with open(lock.file_name, 'r') as f:
-                        current_model_name = f.read()
-                        current_model_path = os.path.join(self._model_dir, current_model_name)
-            file_paths = os.listdir(self._model_dir)
-            file_paths = [os.path.join(self._model_dir, f) for f in file_paths]
-            file_paths.sort(key=lambda x: os.path.getmtime(x), reverse=True)  # new -> old
-            if current_model_path != file_paths[:1]:
-                
-            time.sleep(interval_seconds)
-
+        current_model_path = None
+        if os.path.exists(self.CURRENT_MODEL_FILE):
+            with FileLock(file_name=self.CURRENT_MODEL_FILE) as lock:
+                with open(lock.file_name, 'r') as f:
+                    current_model_name = f.read()
+                    current_model_path = os.path.join(self._model_dir, current_model_name)
+        file_paths = os.listdir(self._model_dir)
+        file_paths = [os.path.join(self._model_dir, fp) for fp in file_paths]
+        file_paths.sort(key=lambda x: os.path.getmtime(x), reverse=True)  # new -> old
+        if current_model_path != file_paths[:1]:
+            # new model found
+            head, tail = os.path.split(file_paths[:1])
+            return tail
+        return None
