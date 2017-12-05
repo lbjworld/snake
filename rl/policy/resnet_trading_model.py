@@ -16,14 +16,10 @@ logger = logging.getLogger(__name__)
 class ResnetTradingModel(object):
     CURRENT_MODEL_FILE = settings.CURRENT_MODEL_FILE
 
-    def __init__(
-        self, name, model_dir='./models', load_model=False,
-        episode_days=200, feature_num=5, specific_model_name=None,
-    ):
+    def __init__(self, name, model_dir, input_shape, load_model=False, specific_model_name=None):
+        assert(name and len(input_shape) == 2)
         self._model_dir = model_dir
-        self._episode_days = episode_days
-        self._feature_num = feature_num
-        assert(name)
+        self._episode_days, self._feature_num = input_shape
         self._name = name
         self._specific_model_name = specific_model_name
         if load_model:

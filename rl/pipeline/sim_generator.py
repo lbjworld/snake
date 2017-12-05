@@ -18,13 +18,14 @@ class SimGenerator(object):
     """generate simulate data"""
 
     def __init__(
-        self, train_stocks, model_name, explore_rate, episode_length, model_dir='./models',
-        data_dir='./sim_data', debug=False, worker_num=4, sim_count=2500, rounds_per_step=1000,
+        self, train_stocks, model_name, explore_rate, input_shape, model_dir,
+        data_dir, debug=False, worker_num=4, sim_count=2500, rounds_per_step=1000,
         worker_timeout=600,
     ):
+        assert(len(input_shape) == 2)
         self._model_name = model_name
         self._model_dir = model_dir
-        self._episode_length = episode_length
+        self._input_shape = input_shape
         self._explore_rate = explore_rate
         self._train_stocks = train_stocks
         self._data_dir = data_dir
@@ -47,11 +48,10 @@ class SimGenerator(object):
             with futures.ProcessPoolExecutor(max_workers=self._worker_num) as executor:
                 _tasks = [executor.submit(sim_run_func, {
                     'stock_name': random.choice(self._train_stocks),
-                    'episode_length': self._episode_length,
+                    'input_shape': self._input_shape,
                     'rounds_per_step': self._rounds_per_step,
                     'model_name': self._model_name,
                     'model_dir': self._model_dir,
-                    'model_feature_num': 5,
                     'sim_explore_rate': self._explore_rate,
                     'debug': self._debug,
                 }) for i in range(sim_batch_size)]

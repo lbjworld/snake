@@ -1,7 +1,11 @@
 # coding: utf-8
 
 EPISODE_LENGTH = 30
+FEATURE_NUM = 5
 DATA_BUFFER_SIZE = 20000
+
+SIM_DATA_DIR = './sim_data'
+MODEL_DATA_DIR = './model_data'
 
 SIM_ROUNDS = 1000  # total sample size: SIM_ROUNDS * EPISODE_LENGTH
 SIM_BATCH_SIZE = 50

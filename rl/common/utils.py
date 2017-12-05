@@ -12,7 +12,7 @@ from common.filelock import FileLock
 logger = logging.getLogger(__name__)
 
 
-def set_current_model(model_name, model_dir='./models'):
+def set_current_model(model_name, model_dir):
     with FileLock(file_name=settings.CURRENT_MODEL_FILE) as lock:
         model_path = os.path.join(model_dir, model_name)
         assert(os.path.exists(model_path))

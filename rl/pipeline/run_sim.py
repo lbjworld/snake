@@ -14,16 +14,20 @@ logger = logging.getLogger(__name__)
 
 
 def evaluation(base_model_name):
+    input_shape = (settings.EPISODE_LENGTH, settings.FEATURE_NUM)
     ds = StockDataSet()
     stock_codes = ds.stock_list(min_days=settings.EPISODE_LENGTH)
 
     if not os.path.exists(settings.CURRENT_MODEL_FILE):
         # no current model, init from scratch
         policy_iter = PolicyIterator(
-            episode_length=settings.EPISODE_LENGTH, data_buffer_size=settings.DATA_BUFFER_SIZE
+            data_dir=settings.SIM_DATA_DIR,
+            model_dir=settings.MODEL_DATA_DIR,
+            input_shape=input_shape,
+            data_buffer_size=settings.DATA_BUFFER_SIZE,
         )
         init_model_name = policy_iter.init_model(model_name=base_model_name)
-        set_current_model(model_name=init_model_name)
+        set_current_model(model_name=init_model_name, model_dir=settings.MODEL_DATA_DIR)
 
     generation = 0
     while True:
@@ -32,8 +36,10 @@ def evaluation(base_model_name):
         sim_gen = SimGenerator(
             train_stocks=stock_codes[:ds.TRAIN_SIZE],
             model_name=base_model_name,
-            episode_length=settings.EPISODE_LENGTH,
+            input_shape=input_shape,
             explore_rate=1e-01,
+            model_dir=settings.MODEL_DATA_DIR,
+            data_dir=settings.SIM_DATA_DIR,
             sim_count=settings.SIM_ROUNDS,
             rounds_per_step=settings.SIM_ROUNDS_PER_STEP,
             worker_num=settings.CPU_CORES,

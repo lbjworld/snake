@@ -20,7 +20,11 @@ def validation(base_model_name):
     """
     ds = StockDataSet()
     stock_codes = ds.stock_list(min_days=settings.EPISODE_LENGTH)
-    policy_validator = PolicyValidator(episode_length=settings.EPISODE_LENGTH)
+    policy_validator = PolicyValidator(
+        model_dir=settings.MODEL_DATA_DIR,
+        episode_length=settings.EPISODE_LENGTH,
+        feature_num=settings.FEATURE_NUM,
+    )
     while True:
         new_model_name = policy_validator.find_latest_model_name()
         if new_model_name:
@@ -35,7 +39,7 @@ def validation(base_model_name):
                 worker_num=settings.CPU_CORES,
             )
             if improved:
-                set_current_model(model_name=new_model_name)
+                set_current_model(model_name=new_model_name, model_dir=settings.MODEL_DATA_DIR)
                 logger.info(
                     '[VALIDATION] model improved, new model[{mn}]'.format(mn=new_model_name)
                 )

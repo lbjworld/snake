@@ -17,14 +17,11 @@ class PolicyValidator(object):
 
     CURRENT_MODEL_FILE = settings.CURRENT_MODEL_FILE
 
-    def __init__(
-        self, episode_length, explore_rate=1e-01, data_dir='./sim_data', model_dir='./models',
-        debug=False
-    ):
-        self._episode_length = episode_length
+    def __init__(self, model_dir, input_shape, explore_rate=1e-01, debug=False):
+        assert(model_dir and len(input_shape) == 2)
+        self._input_shape = input_shape
         self._explore_rate = explore_rate
         self._model_dir = model_dir
-        self._data_dir = data_dir
         self._debug = debug
         self._validated_models = []
 
@@ -38,11 +35,10 @@ class PolicyValidator(object):
             with futures.ProcessPoolExecutor(max_workers=worker_num) as executor:
                 future_to_idx = dict((executor.submit(sim_run_func, {
                     'stock_name': random.choice(valid_stocks),
-                    'episode_length': self._episode_length,
+                    'input_shape': self._input_shape,
                     'rounds_per_step': rounds_per_step,
                     'model_name': model_name,
                     'model_dir': model_dir,
-                    'model_feature_num': 5,
                     'sim_explore_rate': self._explore_rate,
                     'specific_model_name': specific_model_name,
                     'debug': self._debug,
