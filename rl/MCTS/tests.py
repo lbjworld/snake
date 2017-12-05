@@ -2,9 +2,11 @@
 from __future__ import unicode_literals
 
 import unittest
+import cProfile
 from ete3 import Tree
 from gym_trading.envs import FastTradingEnv
 
+from common.utils import Profiling
 from utils import klass_factory, fast_moving
 from trading_policy import RandomTradingPolicy, HoldTradingPolicy
 from trading_node import TradingNode
@@ -76,7 +78,7 @@ class TradingNodeTestCase(unittest.TestCase):
 class MCTSBuilderTestCase(unittest.TestCase):
     def setUp(self):
         self.stock_name = '000333.SZ'
-        self.days = 10
+        self.days = 30
         self.env = FastTradingEnv(name=self.stock_name, days=self.days)
 
     def test_mcts_batch_debug(self):
@@ -120,6 +122,17 @@ class MCTSBuilderTestCase(unittest.TestCase):
         root_node = block.run_once(hold_policy, env_snapshot=snapshot_v1)
         self.assertTrue(root_node)
         root_node.show_graph()
+
+    def test_profile(self):
+        # buy and hold policy
+        policy = HoldTradingPolicy(action_options=self.env.action_options(), action_idx=1)
+        self.env.reset()
+
+        with Profiling(cProfile.Profile()):
+            snapshot_v0 = self.env.snapshot()
+            block = MCTSBuilder(self.env, debug=False)
+            block.clean_up()
+            block.run_batch(policy, env_snapshot=snapshot_v0, batch_size=100)
 
 
 if __name__ == '__main__':

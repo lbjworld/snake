@@ -36,7 +36,6 @@ class MCTSBuilder(object):
             # init node
             self._root_node = self.node_klass(state=None)
         # episode start
-        assert(self._root_node)
         if env_snapshot:
             # recover gym env from env_snapshot if exist
             self._gym_env.recover(env_snapshot)
