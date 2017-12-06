@@ -80,7 +80,7 @@ class SimDataSet(object):
             # load additional files
             assert(len(self._current_file_queue))
             latest_file_path, _ = self._current_file_queue[0]
-            if latest_file_path != file_paths[1:]:
+            if latest_file_path != file_paths[0]:
                 # there are new files added
                 loaded_size = self._load_new_data(
                     file_paths[:file_paths.index(latest_file_path)], self._pool_size

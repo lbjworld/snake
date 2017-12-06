@@ -32,5 +32,5 @@ def improvement(base_model_name):
 
 if __name__ == '__main__':
     assert(logger)
-    logging.basicConfig(filename='improvement.log', level=logging.INFO)
+    logging.basicConfig(filename='improvement.log', level=logging.DEBUG)
     improvement(base_model_name='resnet_18')
