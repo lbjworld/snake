@@ -26,7 +26,7 @@ class FastTradingEnv(object):
         data_df = data_df[(~np.isnan(data_df.volume)) & (data_df.volume > 1e-9)]  # 跳过所有停牌日
         self.pct_change = data_df.pct_change().fillna(0.0) + 1.0  # 计算变化量
         data_df.volume = data_df.volume / FastTradingEnv.VOLUME_SCALE_FACTOR
-        self.data = data_df
+        self.data = data_df.as_matrix()
 
         self.trading_cost_pct_change = 1.0 - trading_cost_bps
         self._actions = np.zeros(self.days)
@@ -43,7 +43,7 @@ class FastTradingEnv(object):
 
     def reset(self):
         # we want continuous data
-        high = len(self.data.index) - self.days
+        high = self.data.shape[0] - self.days
         if high <= 1:
             raise Exception('stock[{name}] data too short'.format(name=self.name))
         self._idx = np.random.randint(low=1, high=high)
@@ -55,14 +55,12 @@ class FastTradingEnv(object):
         assert action in self.action_space, "%r (%s) invalid" % (action, type(action))
         # data step
         ###############################
-        data_step = self._step + 1
-        current_idx = self._idx + data_step
-        visible_data = np.zeros((self.days, len(self.data.columns)))
-        current_data = self.data[self._idx:current_idx].as_matrix()
-        visible_data[:current_data.shape[0]] += current_data
-        obs = visible_data
-        nav_pct_change = self.pct_change.iat[current_idx, 3]  # close pct change
-        done = bool(data_step >= self.days)
+        _next_step = self._step + 1
+        # get next obs
+        obs = self.observations(_next_step)
+        # close pct change
+        nav_pct_change = self.pct_change.iat[self._idx + _next_step, 3]
+        done = bool(_next_step >= self.days)
 
         # sim step
         ###############################
@@ -89,6 +87,15 @@ class FastTradingEnv(object):
 
         self._step += 1
         return obs, reward, done, info
+
+    def observations(self, data_step=0):
+        """get current observations"""
+        current_idx = self._idx + data_step
+        obs = np.zeros((self.days, self.data.shape[1]))
+        if data_step > 0:
+            current_data = self.data[self._idx:current_idx, :]
+            obs[:current_data.shape[0]] += current_data
+        return obs
 
     def snapshot(self):
         return {

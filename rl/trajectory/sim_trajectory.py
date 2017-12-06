@@ -43,15 +43,18 @@ class SimTrajectory(object):
         obs, reward, done, info = self._main_env.step(action)
         # save simluation history
         self._sim_history.append({
-            'obs': obs,
+            'obs': self._last_obs,
+            'action': action,
             'q_table': q_table,
             'reward': reward,
         })
+        self._last_obs = obs
         return action, done
 
     def sim_run(self, rounds_per_step=100):
         done = False
         init_node = None
+        self._last_obs = self._main_env.observations()
         # progress_bar = tqdm(total=self._main_env.days)
         while not done:
             result_node = self._state_evaluation(
