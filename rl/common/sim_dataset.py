@@ -65,13 +65,15 @@ class SimDataSet(object):
         for i in range(_file_count):
             self._current_file_queue.pop()
         self._data_pool = self._data_pool[_remove_size:]
+        logger.debug('remove old data, files({fc}), size({s})'.format(fc=_file_count, s=_remove_size))
+        return _remove_size
 
     def _load_latest_data(self):
         file_paths = os.listdir(self._data_dir)
         if not file_paths:
             raise Exception('no data found in [{d}]'.format(d=self._data_dir))
         file_paths = [os.path.join(self._data_dir, f) for f in file_paths]
-        file_paths.sort(key=lambda x: os.path.getmtime(x), reverse=True)
+        file_paths.sort(key=lambda x: os.path.getmtime(x), reverse=True)  # new -> old
         if len(self._current_file_queue) == 0:
             # load from scratch
             loaded_size = self._load_new_data(file_paths, self._pool_size)
@@ -80,15 +82,16 @@ class SimDataSet(object):
             # load additional files
             assert(len(self._current_file_queue))
             latest_file_path, _ = self._current_file_queue[0]
-            if latest_file_path != file_paths[0]:
+            if latest_file_path.strip() != file_paths[0].strip():
                 # there are new files added
                 loaded_size = self._load_new_data(
                     file_paths[:file_paths.index(latest_file_path)], self._pool_size
                 )
+                logger.debug('load incremental data({s})'.format(s=loaded_size))
                 if len(self._data_pool) > self._pool_size:
                     # data pool already full, remove old data
-                    self._remove_old_data(loaded_size)
-                logger.debug('load incremental data({s})'.format(s=loaded_size))
+                    removed_size = self._remove_old_data(loaded_size)
+                    logger.debug('remove old data({s})'.format(s=removed_size))
 
     def gen_data(self, select_size, shuffle=True):
         data_pool_size = len(self._data_pool)
