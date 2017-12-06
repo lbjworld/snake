@@ -111,6 +111,9 @@ class ResnetTradingModel(object):
             shuffle=True,  # validation_split=0.1
         )
 
+    def fit_generator(self, generator, steps_per_epoch):
+        return self._model.fit_generator(generator=generator, steps_per_epoch=steps_per_epoch)
+
     def predict(self, x, debug=False):
         batch_x = np.expand_dims(x, axis=0)
         outputs = self._model.predict(self._preprocess(batch_x), batch_size=1, verbose=debug)
