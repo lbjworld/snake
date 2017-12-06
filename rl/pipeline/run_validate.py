@@ -22,8 +22,7 @@ def validation(base_model_name):
     stock_codes = ds.stock_list(min_days=settings.EPISODE_LENGTH)
     policy_validator = PolicyValidator(
         model_dir=settings.MODEL_DATA_DIR,
-        episode_length=settings.EPISODE_LENGTH,
-        feature_num=settings.FEATURE_NUM,
+        input_shape=(settings.EPISODE_LENGTH, settings.FEATURE_NUM),
     )
     while True:
         new_model_name = policy_validator.find_latest_model_name()
