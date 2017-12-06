@@ -103,7 +103,7 @@ class SimDataSet(object):
             _x[idx] = r['obs']
             p_y[idx] = r['q_table']
             v_y[idx] = r['final_reward']
-        return np.array(_x), [np.array(p_y), np.array(v_y)]
+        return np.expand_dims(np.array(_x), axis=3), [np.array(p_y), np.array(v_y)]
 
     def generator(self, batch_size=2048):
         self._load_latest_data()
