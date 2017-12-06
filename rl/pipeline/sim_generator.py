@@ -19,7 +19,7 @@ class SimGenerator(object):
 
     def __init__(
         self, train_stocks, model_name, explore_rate, input_shape, model_dir,
-        data_dir, debug=False, sim_count=2500, rounds_per_step=1000, worker_timeout=600,
+        data_dir, debug=False, sim_count=2500, rounds_per_step=1000, worker_timeout=100,
     ):
         assert(len(input_shape) == 2)
         self._model_name = model_name
