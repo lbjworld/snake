@@ -36,7 +36,7 @@ def validation(base_model_name):
                 target=new_model_name,
                 rounds=settings.VALID_ROUNDS,
                 rounds_per_step=settings.VALID_ROUNDS_PER_STEP,
-                worker_num=settings.CPU_CORES,
+                worker_num=int(settings.CPU_CORES/2),
             )
             if improved:
                 set_current_model(model_name=new_model_name, model_dir=settings.MODEL_DATA_DIR)

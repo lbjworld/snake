@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 
 import os
 import logging
-import random
+import numpy as np
 from concurrent import futures
 
 from common import settings
@@ -26,15 +26,15 @@ class PolicyValidator(object):
         self._validated_models = []
 
     def _validate_model(
-        self, valid_stocks, model_dir, model_name, rounds, rounds_per_step, worker_num,
+        self, valid_stocks, model_dir, model_name, rounds_per_step, worker_num,
         specific_model_name=None
     ):
         # run sim trajectory on model, and return average reward
         _result = []
-        for i in range(0, rounds, worker_num):
+        for i in range(0, len(valid_stocks), worker_num):
             with futures.ProcessPoolExecutor(max_workers=worker_num) as executor:
                 future_to_idx = dict((executor.submit(sim_run_func, {
-                    'stock_name': random.choice(valid_stocks),
+                    'stock_name': valid_stocks[i+j],
                     'input_shape': self._input_shape,
                     'rounds_per_step': rounds_per_step,
                     'model_name': model_name,
@@ -65,20 +65,19 @@ class PolicyValidator(object):
         Return:
             (string): selected model name
         """
+        select_valid_stocks = np.random.choice(valid_stocks, rounds)
         # validate src model
         src_avg_reward = self._validate_model(
-            valid_stocks=valid_stocks,
+            valid_stocks=select_valid_stocks,
             model_dir=self._model_dir,
             model_name=base,
-            rounds=rounds,
             rounds_per_step=rounds_per_step,
             worker_num=worker_num,
         )
         target_avg_reward = self._validate_model(
-            valid_stocks=valid_stocks,
+            valid_stocks=select_valid_stocks,
             model_dir=self._model_dir,
             model_name=base,
-            rounds=rounds,
             rounds_per_step=rounds_per_step,
             worker_num=worker_num,
             specific_model_name=target,
