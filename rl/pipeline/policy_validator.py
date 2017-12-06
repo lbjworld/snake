@@ -89,17 +89,16 @@ class PolicyValidator(object):
 
     def find_latest_model_name(self, interval_seconds=600):
         """watch model dir and return new added model name"""
-        current_model_path = None
+        current_model_name = None
         if os.path.exists(self.CURRENT_MODEL_FILE):
             with FileLock(file_name=self.CURRENT_MODEL_FILE) as lock:
                 with open(lock.file_name, 'r') as f:
                     current_model_name = f.read()
-                    current_model_path = os.path.join(self._model_dir, current_model_name)
         file_paths = os.listdir(self._model_dir)
         file_paths = [os.path.join(self._model_dir, fp) for fp in file_paths]
         file_paths.sort(key=lambda x: os.path.getmtime(x), reverse=True)  # new -> old
-        if current_model_path != file_paths[:1]:
+        _, latest_model_name = os.path.split(file_paths[0])
+        if current_model_name != latest_model_name:
             # new model found
-            head, tail = os.path.split(file_paths[:1])
-            return tail
+            return latest_model_name
         return None
