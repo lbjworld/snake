@@ -72,7 +72,7 @@ class SimDataSet(object):
             raise Exception('no data found in [{d}]'.format(d=self._data_dir))
         file_paths = [os.path.join(self._data_dir, f) for f in file_paths]
         file_paths.sort(key=lambda x: os.path.getmtime(x), reverse=True)
-        if self._current_file_queue.empty():
+        if len(self._current_file_queue) == 0:
             # load from scratch
             loaded_size = self._load_new_data(file_paths, self._pool_size)
             logger.debug('load scratch data({s})'.format(s=loaded_size))
