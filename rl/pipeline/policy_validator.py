@@ -98,7 +98,8 @@ class PolicyValidator(object):
         file_paths = [os.path.join(self._model_dir, fp) for fp in file_paths]
         file_paths.sort(key=lambda x: os.path.getmtime(x), reverse=True)  # new -> old
         _, latest_model_name = os.path.split(file_paths[0])
-        if current_model_name != latest_model_name:
+        latest_model_name = latest_model_name.strip()
+        if current_model_name and current_model_name.strip() != latest_model_name:
             # new model found
             return latest_model_name
         return None
