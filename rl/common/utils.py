@@ -21,6 +21,18 @@ def set_current_model(model_name, model_dir):
             logger.debug('set current model to [{name}]'.format(name=model_name))
 
 
+def get_file_name(file_path):
+    _, file_name = os.path.split(file_path)
+    return file_name.strip()
+
+
+def get_dir_list(file_dir):
+    """list dir, and order by mtime desc"""
+    file_paths = [os.path.join(file_dir, f) for f in os.listdir(file_dir)]
+    file_paths.sort(key=lambda x: os.path.getmtime(x), reverse=True)  # new -> old
+    return file_paths
+
+
 class Profiling(object):
     def __init__(self, pr):
         self._pr = pr
