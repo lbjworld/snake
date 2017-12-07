@@ -48,7 +48,7 @@ class SimDataSet(object):
             r, s = self._load_single_data_file(file_path)
             if _current_size < size:
                 self._data_pool.extend(r)
-                self._current_file_queue.appendleft((file_path, s))
+                self._current_file_queue.append((file_path, s))
                 _current_size += s
             else:
                 break
@@ -64,9 +64,8 @@ class SimDataSet(object):
             _remove_size += data_size
             _file_count += 1
         for i in range(_file_count):
-            self._current_file_queue.pop()
-        data_length = len(self._data_pool)
-        self._data_pool = self._data_pool[:data_length-_remove_size]
+            self._current_file_queue.popleft()
+        self._data_pool = self._data_pool[_remove_size:]
         logger.debug('remove old data, files({fc}), size({s})'.format(
             fc=_file_count, s=_remove_size)
         )
@@ -97,15 +96,17 @@ class SimDataSet(object):
                     file_paths[:latest_idx], self._pool_size
                 )
                 logger.debug('load incremental data({s})'.format(s=loaded_size))
-                if len(self._data_pool) > self._pool_size:
+                current_pool_size = len(self._data_pool)
+                if current_pool_size > self._pool_size:
                     # data pool already full, remove old data
-                    removed_size = self._remove_old_data(loaded_size)
+                    removed_size = self._remove_old_data(current_pool_size - self._pool_size)
                     logger.debug('remove old data({s})'.format(s=removed_size))
 
     def gen_data(self, select_size, shuffle=True):
         data_pool_size = len(self._data_pool)
         if select_size > data_pool_size:
             raise Exception('data pool too small to gen data size({s})'.format(s=select_size))
+        logger.info('current data pool size({s})'.format(s=data_pool_size))
         select_indices = np.random.choice(range(data_pool_size), select_size)
         if shuffle:
             np.random.shuffle(select_indices)
