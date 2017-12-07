@@ -7,6 +7,7 @@ import numpy as np
 from concurrent import futures
 
 from common import settings
+from common.utils import get_file_name, get_dir_list
 from common.filelock import FileLock
 from trajectory.sim_run import sim_run_func
 
@@ -23,7 +24,7 @@ class PolicyValidator(object):
         self._explore_rate = explore_rate
         self._model_dir = model_dir
         self._debug = debug
-        self._validated_models = []
+        self._validated_models = set()
 
     def _validate_model(
         self, valid_stocks, model_dir, model_name, rounds_per_step, worker_num,
@@ -85,6 +86,7 @@ class PolicyValidator(object):
         logger.info('src_avg_reward:{sar}, target_avg_reward:{tar}'.format(
             sar=src_avg_reward, tar=target_avg_reward,
         ))
+        self._validated_models.add(target)
         return target_avg_reward > src_avg_reward
 
     def find_latest_model_name(self, interval_seconds=600):
@@ -94,12 +96,13 @@ class PolicyValidator(object):
             with FileLock(file_name=self.CURRENT_MODEL_FILE) as lock:
                 with open(lock.file_name, 'r') as f:
                     current_model_name = f.read()
-        file_paths = os.listdir(self._model_dir)
-        file_paths = [os.path.join(self._model_dir, fp) for fp in file_paths]
-        file_paths.sort(key=lambda x: os.path.getmtime(x), reverse=True)  # new -> old
-        _, latest_model_name = os.path.split(file_paths[0])
-        latest_model_name = latest_model_name.strip()
-        if current_model_name and current_model_name.strip() != latest_model_name:
+                    current_model_name = current_model_name.strip()
+        file_paths = get_dir_list(self._model_dir)
+        latest_model_name = get_file_name(file_paths[0])
+        if latest_model_name in self._validated_models:
+            # ignore valiated model
+            return None
+        if current_model_name and current_model_name != latest_model_name:
             # new model found
             return latest_model_name
         return None
