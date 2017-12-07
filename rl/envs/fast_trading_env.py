@@ -74,13 +74,13 @@ class FastTradingEnv(object):
         if not self._step == 0:
             # trading fee for changing trade position
             if abs(self._actions[self._step-1] - action) > 0:
-                reward = self._navs[self._step] * self.trading_cost_pct_change
+                reward = self._navs[self._step] * self.trading_cost_pct_change - 1.0
         if done:
             # episode finished, force sold
-            reward = self._navs[self._step] * self.trading_cost_pct_change
+            reward = self._navs[self._step] * self.trading_cost_pct_change - 1.0
         info = {
             'step': self._step,
-            'reward': reward - 1.0,
+            'reward': reward,
             'nav': self._navs[self._step],
         }
         # TODO: add shortcut for low NAV
