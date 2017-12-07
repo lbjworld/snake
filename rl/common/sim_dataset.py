@@ -35,7 +35,7 @@ class SimDataSet(object):
         self._data_dir = data_dir
         self._pool_size = pool_size
         self._current_file_queue = deque()  # new -> old
-        self._data_pool = []
+        self._data_pool = []  # old -> new
 
     def _load_single_data_file(self, file_path):
         with open(file_path, 'r') as f:
@@ -48,7 +48,7 @@ class SimDataSet(object):
             r, s = self._load_single_data_file(file_path)
             if _current_size < size:
                 self._data_pool.extend(r)
-                self._current_file_queue.append((file_path, s))
+                self._current_file_queue.appendleft((file_path, s))
                 _current_size += s
             else:
                 break
@@ -65,7 +65,8 @@ class SimDataSet(object):
             _file_count += 1
         for i in range(_file_count):
             self._current_file_queue.pop()
-        self._data_pool = self._data_pool[_remove_size:]
+        data_length = len(self._data_pool)
+        self._data_pool = self._data_pool[:data_length-_remove_size]
         logger.debug('remove old data, files({fc}), size({s})'.format(
             fc=_file_count, s=_remove_size)
         )
