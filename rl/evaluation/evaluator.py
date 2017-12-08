@@ -1,10 +1,13 @@
 # coding: utf-8
 from __future__ import unicode_literals
 
+import logging
 import numpy as np
 import pandas as pd
 
 from envs.fast_trading_env import FastTradingEnv
+
+logger = logging.getLogger(__name__)
 
 
 class Evaluator(object):
@@ -41,18 +44,24 @@ class Evaluator(object):
         return eval_history
 
     def evaluate(self, basic_model, evaluate_model, valid_stocks, rounds):
-        select_valid_stocks = np.random.choice(valid_stocks, rounds)
+        _count = 0
         basic_avg_reward, evaluate_avg_reward = 0.0, 0.0
-        for stock_name in select_valid_stocks:
-            env = FastTradingEnv(
-                stock_name=stock_name, days=self._input_shape[0], use_adjust_close=False
-            )
+        while _count < rounds:
+            stock_name = np.random.choice(valid_stocks, 1)[0]
+            try:
+            	env = FastTradingEnv(
+            	    name=stock_name, days=self._input_shape[0], use_adjust_close=False
+            	)
+            except Exception as e:
+                logger.exception('env init error, {e}'.format(e=e))
+                continue
             env_snapshot = env.snapshot()
             basic_evals = self.evaluate_on_env(basic_model, env)
             basic_avg_reward += basic_evals[-1]['real_reward']
             env.recover(env_snapshot)
             evaluate_evals = self.evaluate_on_env(evaluate_model, env)
             evaluate_avg_reward += evaluate_evals[-1]['real_reward']
+            _count += 1
         return basic_avg_reward / rounds, evaluate_avg_reward / rounds
 
     def show_plot(self, eval_history):
