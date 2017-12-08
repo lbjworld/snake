@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 import pickle
 import logging
 import math
+import threading
 from collections import deque
 import numpy as np
 from keras.utils import Sequence
@@ -36,6 +37,7 @@ class SimDataSet(object):
         self._pool_size = pool_size
         self._current_file_queue = deque()  # new -> old
         self._data_pool = []  # old -> new
+        self._lock = threading.Lock()
 
     def _load_single_data_file(self, file_path):
         with open(file_path, 'r') as f:
@@ -44,7 +46,11 @@ class SimDataSet(object):
 
     def _load_new_data(self, file_paths, size):
         _current_size = 0
+        _current_files = [f for f, s in self._current_file_queue]
         for file_path in file_paths:
+            if file_path in _current_files:
+                # ignore already processed file
+                continue
             r, s = self._load_single_data_file(file_path)
             if _current_size < size:
                 self._data_pool.extend(r)
@@ -72,6 +78,7 @@ class SimDataSet(object):
         return _remove_size
 
     def _load_latest_data(self):
+        self._lock.acquire()
         file_paths = get_dir_list(self._data_dir)
         if not file_paths:
             raise Exception('no data found in [{d}]'.format(d=self._data_dir))
@@ -101,6 +108,7 @@ class SimDataSet(object):
                     # data pool already full, remove old data
                     removed_size = self._remove_old_data(current_pool_size - self._pool_size)
                     logger.debug('remove old data({s})'.format(s=removed_size))
+        self._lock.release()
 
     def gen_data(self, select_size, shuffle=True):
         data_pool_size = len(self._data_pool)
