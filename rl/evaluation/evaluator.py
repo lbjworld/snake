@@ -3,7 +3,6 @@ from __future__ import unicode_literals
 
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
 
 from envs.fast_trading_env import FastTradingEnv
 
@@ -57,6 +56,7 @@ class Evaluator(object):
         return basic_avg_reward / rounds, evaluate_avg_reward / rounds
 
     def show_plot(self, eval_history):
+        import matplotlib.pyplot as plt
         # prepare data
         obs = pd.DataFrame(eval_history[-1]['post_obs'])
         obs.columns = ['open', 'high', 'low', 'close', 'volume']
@@ -92,8 +92,9 @@ class Evaluator(object):
         axs[1].plot(
             buy_signals, obs['close'][buy_signals], 'b^',
             sell_signals, obs['close'][sell_signals], 'rv',
-            obs['close'].index, obs['close'], 'k-',
-            obs['open'].index, obs['open'], 'g-',
+            obs['close'].index, obs['close'], 'r-',
+            obs['high'].index, obs['high'], 'g--',
+            obs['low'].index, obs['low'], 'k--',
         )
 
         plt.show()
