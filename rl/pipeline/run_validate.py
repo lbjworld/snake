@@ -12,7 +12,7 @@ from pipeline.policy_validator import PolicyValidator
 logger = logging.getLogger(__name__)
 
 
-def validation(base_model_name):
+def validation():
     """
         1. watch model dir
         2. when new model added, do validation
@@ -24,10 +24,15 @@ def validation(base_model_name):
         model_dir=settings.MODEL_DATA_DIR,
         input_shape=(settings.EPISODE_LENGTH, settings.FEATURE_NUM),
     )
+    base_model_name = None
     while True:
         new_model_name = policy_validator.find_latest_model_name()
         if new_model_name:
             logger.info('[VALIDATION] found new model[{mn}]'.format(mn=new_model_name))
+            # get base model name
+            with open(settings.CURRENT_MODEL_FILE, 'r') as f:
+                base_model_name = f.read().strip()
+            assert(base_model_name)
             # policy validation (compare between target and src)
             improved = policy_validator.validate(
                 basic_model=base_model_name,
@@ -52,4 +57,4 @@ def validation(base_model_name):
 if __name__ == '__main__':
     assert(logger)
     logging.basicConfig(filename='validation.log', level=logging.INFO)
-    validation(base_model_name='resnet_18')
+    validation()
