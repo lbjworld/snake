@@ -23,7 +23,7 @@ def sim_run_func(params):
     specific_model_name = params.get('specific_model_name')
     debug = params.get('debug', False)
     # create env
-    _env = FastTradingEnv(name=stock_name, days=input_shape[0])
+    _env = FastTradingEnv(name=stock_name, days=input_shape[0], use_adjust_close=False)
     _env.reset()
     logger.debug('created env[{name}:{shape}]'.format(name=stock_name, shape=input_shape))
     # load model

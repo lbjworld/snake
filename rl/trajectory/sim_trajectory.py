@@ -19,7 +19,9 @@ class SimTrajectory(object):
 
         # change every step of trajectory
         self._sim_history = []
-        self._tmp_env = FastTradingEnv(name=self._main_env.name, days=self._main_env.days)
+        self._tmp_env = FastTradingEnv(
+            name=self._main_env.name, days=self._main_env.days, use_adjust_close=False
+        )
 
     @property
     def history(self):

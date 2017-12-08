@@ -3,13 +3,12 @@ from __future__ import unicode_literals
 
 import os
 import logging
-import numpy as np
-from concurrent import futures
 
 from common import settings
 from common.utils import get_file_name, get_dir_list
 from common.filelock import FileLock
-from trajectory.sim_run import sim_run_func
+
+from evaluation.evaluator import Evaluator
 
 logger = logging.getLogger(__name__)
 
@@ -18,47 +17,15 @@ class PolicyValidator(object):
 
     CURRENT_MODEL_FILE = settings.CURRENT_MODEL_FILE
 
-    def __init__(self, model_dir, input_shape, explore_rate=1e-01, debug=False):
+    def __init__(self, model_dir, input_shape, debug=False):
         assert(model_dir and len(input_shape) == 2)
         self._input_shape = input_shape
-        self._explore_rate = explore_rate
         self._model_dir = model_dir
         self._debug = debug
         self._validated_models = set()
+        self._evaluator = Evaluator(model_dir=self._model_dir, input_shape=self._input_shape)
 
-    def _validate_model(
-        self, valid_stocks, model_dir, model_name, rounds_per_step, worker_num,
-        specific_model_name=None
-    ):
-        # run sim trajectory on model, and return average reward
-        _result = []
-        for i in range(0, len(valid_stocks), worker_num):
-            with futures.ProcessPoolExecutor(max_workers=worker_num) as executor:
-                future_to_idx = dict((executor.submit(sim_run_func, {
-                    'stock_name': valid_stocks[i+j],
-                    'input_shape': self._input_shape,
-                    'rounds_per_step': rounds_per_step,
-                    'model_name': model_name,
-                    'model_dir': model_dir,
-                    'sim_explore_rate': self._explore_rate,
-                    'specific_model_name': specific_model_name,
-                    'debug': self._debug,
-                }), i+j) for j in range(worker_num))
-                for future in futures.as_completed(future_to_idx):
-                    idx = future_to_idx[future]
-                    if future.exception():
-                        logger.error('validate Sim[{idx}] error: {e}'.format(
-                            idx=idx, e=future.exception())
-                        )
-                        continue
-                    logger.info('validate Sim[{idx}] finished'.format(idx=idx))
-                    r = future.result()
-                    _result.append(r[-1]['final_reward'])
-        if not _result:
-            return 0.0
-        return sum(_result) * 1.0 / len(_result)
-
-    def validate(self, valid_stocks, base, target, rounds=200, rounds_per_step=100, worker_num=4):
+    def validate(self, basic_model, evaluate_model, valid_stocks, rounds=200):
         """
         Args:
             base(string): base model name
@@ -66,28 +33,12 @@ class PolicyValidator(object):
         Return:
             (string): selected model name
         """
-        select_valid_stocks = np.random.choice(valid_stocks, rounds)
-        # validate src model
-        src_avg_reward = self._validate_model(
-            valid_stocks=select_valid_stocks,
-            model_dir=self._model_dir,
-            model_name=base,
-            rounds_per_step=rounds_per_step,
-            worker_num=worker_num,
-        )
-        target_avg_reward = self._validate_model(
-            valid_stocks=select_valid_stocks,
-            model_dir=self._model_dir,
-            model_name=base,
-            rounds_per_step=rounds_per_step,
-            worker_num=worker_num,
-            specific_model_name=target,
-        )
-        logger.info('src_avg_reward:{sar}, target_avg_reward:{tar}'.format(
-            sar=src_avg_reward, tar=target_avg_reward,
+        BAR, EAR = self._evaluator.evaluate(basic_model, evaluate_model, valid_stocks, rounds)
+        logger.info('basic_avg_reward:{bar}, evaluate_avg_reward:{ear}'.format(
+            bar=BAR, ear=EAR,
         ))
-        self._validated_models.add(target)
-        return target_avg_reward > src_avg_reward
+        self._validated_models.add(evaluate_model)
+        return EAR > BAR
 
     def find_latest_model_name(self, interval_seconds=600):
         """watch model dir and return new added model name"""

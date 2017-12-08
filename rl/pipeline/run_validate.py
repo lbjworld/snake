@@ -30,12 +30,10 @@ def validation(base_model_name):
             logger.info('[VALIDATION] found new model[{mn}]'.format(mn=new_model_name))
             # policy validation (compare between target and src)
             improved = policy_validator.validate(
+                basic_model=base_model_name,
+                evaluate_model=new_model_name,
                 valid_stocks=stock_codes[ds.TRAIN_SIZE:ds.TRAIN_SIZE+ds.VALID_SIZE],
-                base=base_model_name,
-                target=new_model_name,
                 rounds=settings.VALID_ROUNDS,
-                rounds_per_step=settings.VALID_ROUNDS_PER_STEP,
-                worker_num=int(settings.CPU_CORES/2),
             )
             if improved:
                 set_current_model(model_name=new_model_name, model_dir=settings.MODEL_DATA_DIR)
@@ -49,6 +47,7 @@ def validation(base_model_name):
         else:
             logger.info('[VALIDATION] new model not found, waiting ...')
         time.sleep(settings.VALID_INTERVAL)
+
 
 if __name__ == '__main__':
     assert(logger)
