@@ -66,6 +66,24 @@ class SimDataSetTestCase(unittest.TestCase):
         for data in ds._data_pool:
             self.assertEqual(data, 3)
 
+    @mock.patch('common.sim_dataset.get_dir_list')
+    def test_init_load_data(self, mock_get_dir_list):
+        pool_size = 10
+        ds = SimDataSet('./test_dir', pool_size)
+        exist_files = [
+            '{i}.txt'.format(i=i+1) for i in reversed(range(20))
+        ]
+        mock_get_dir_list.return_value = exist_files
+        ds._load_single_data_file = mock.MagicMock(return_value=([1], 1))
+        ds._load_latest_data()
+        self.assertEqual(len(ds._data_pool), pool_size)
+        for idx, item in enumerate(ds._current_file_queue):
+            fp, s = item
+            self.assertEqual(s, 1)
+            self.assertTrue(exist_files[idx] in fp)
+
+
+
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
