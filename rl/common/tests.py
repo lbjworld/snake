@@ -14,40 +14,57 @@ class SimDataSetTestCase(unittest.TestCase):
 
     @mock.patch('common.sim_dataset.get_dir_list')
     def test_data_rotation(self, mock_get_dir_list):
-        pool_size = 20
+        pool_size = 10
         ds = SimDataSet('./test_dir', pool_size)
 
         # test load data from scratch
-        init_load_size = 10
-        mock_get_dir_list.return_value = [
-            '{i}.txt'.format(i=init_load_size-i) for i in range(init_load_size)
+        exist_files = [
+            '{i}.txt'.format(i=i+1) for i in reversed(range(pool_size))
         ]
+        mock_get_dir_list.return_value = exist_files
         ds._load_single_data_file = mock.MagicMock(return_value=([1], 1))
         ds._load_latest_data()
-        self.assertEqual(len(ds._data_pool), init_load_size)
+        self.assertEqual(len(ds._data_pool), pool_size)
         for idx, item in enumerate(ds._current_file_queue):
             fp, s = item
             self.assertEqual(s, 1)
-            self.assertTrue(unicode(init_load_size-idx) in fp)
+            self.assertTrue(exist_files[idx] in fp)
+        # check data pool
+        for data in ds._data_pool:
+            self.assertEqual(data, 1)
 
-        # test load additional data
-        add_data_size = 20
-        total_data_size = init_load_size + add_data_size
-        mock_get_dir_list.return_value = [
-            '{i}.txt'.format(i=total_data_size-i)
-            for i in range(total_data_size)
-        ]
+        # test load one additional data
+        exist_files = ['{i}.txt'.format(i=len(exist_files)+1)] + exist_files
+        mock_get_dir_list.return_value = exist_files
         ds._load_single_data_file = mock.MagicMock(return_value=([2], 1))
         ds._load_latest_data()
         self.assertEqual(len(ds._data_pool), pool_size)
         for idx, item in enumerate(ds._current_file_queue):
             fp, s = item
             self.assertEqual(s, 1)
-            self.assertTrue(unicode(total_data_size-idx) in fp)
+            self.assertTrue(exist_files[idx] in fp)
+        # check data pool
+        for idx, data in enumerate(ds._data_pool):
+            if idx != len(ds._data_pool) - 1:
+                self.assertEqual(data, 1)
+            else:
+                self.assertEqual(data, 2)
 
+        # test load many additional data
+        exist_files = [
+            '{i}.txt'.format(i=len(exist_files)+idx+1) for idx in reversed(range(10))
+        ] + exist_files
+        mock_get_dir_list.return_value = exist_files
+        ds._load_single_data_file = mock.MagicMock(return_value=([3], 1))
+        ds._load_latest_data()
+        self.assertEqual(len(ds._data_pool), pool_size)
+        for idx, item in enumerate(ds._current_file_queue):
+            fp, s = item
+            self.assertEqual(s, 1)
+            self.assertTrue(exist_files[idx] in fp)
         # check data pool
         for data in ds._data_pool:
-            self.assertEqual(data, 2)
+            self.assertEqual(data, 3)
 
 
 if __name__ == '__main__':

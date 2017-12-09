@@ -48,14 +48,14 @@ class SimDataSet(object):
         _current_size = 0
         _current_files = [f for f, s in self._current_file_queue]
         logger.debug('add new data files: {fs}'.format(fs=file_paths))
-        for file_path in file_paths:
+        for file_path in reversed(file_paths):
             if file_path in _current_files:
                 # ignore already processed file
                 continue
             r, s = self._load_single_data_file(file_path)
             if _current_size < size:
                 self._data_pool.extend(r)
-                self._current_file_queue.append((file_path, s))
+                self._current_file_queue.appendleft((file_path, s))
                 _current_size += s
             else:
                 break
@@ -72,7 +72,7 @@ class SimDataSet(object):
             _file_count += 1
         _remove_files = []
         for i in range(_file_count):
-            f, s = self._current_file_queue.popleft()
+            f, s = self._current_file_queue.pop()
             _remove_files.append(f)
         logger.debug('remove data files: {fs}'.format(fs=_remove_files))
         self._data_pool = self._data_pool[_remove_size:]
