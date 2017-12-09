@@ -16,15 +16,7 @@ class Evaluator(object):
         self._model_dir = model_dir
         self._input_shape = input_shape
 
-    def evaluate_on_env(self, model_name, env):
-        from policy.resnet_trading_model import ResnetTradingModel
-        model = ResnetTradingModel(
-            name='test',
-            model_dir=self._model_dir,
-            input_shape=self._input_shape,
-            load_model=True,
-            specific_model_name=model_name
-        )
+    def evaluate_on_env(self, model, env):
         eval_history = []
         done = False
         last_obs = env.observations()
@@ -44,6 +36,23 @@ class Evaluator(object):
         return eval_history
 
     def evaluate(self, basic_model, evaluate_model, valid_stocks, rounds):
+        # load both models
+	from policy.resnet_trading_model import ResnetTradingModel
+        bm = ResnetTradingModel(
+            name=basic_model,
+            model_dir=self._model_dir,
+            input_shape=self._input_shape,
+            load_model=True,
+            specific_model_name=basic_model
+        )
+	em = ResnetTradingModel(
+            name=evaluate_model,
+            model_dir=self._model_dir,
+            input_shape=self._input_shape,
+            load_model=True,
+            specific_model_name=evaluate_model
+        )
+        # start evaluation
         _count = 0
         basic_avg_reward, evaluate_avg_reward = 0.0, 0.0
         while _count < rounds:
@@ -56,10 +65,10 @@ class Evaluator(object):
                 logger.exception('env init error, {e}'.format(e=e))
                 continue
             env_snapshot = env.snapshot()
-            basic_evals = self.evaluate_on_env(basic_model, env)
+            basic_evals = self.evaluate_on_env(bm, env)
             basic_avg_reward += basic_evals[-1]['real_reward']
             env.recover(env_snapshot)
-            evaluate_evals = self.evaluate_on_env(evaluate_model, env)
+            evaluate_evals = self.evaluate_on_env(em, env)
             evaluate_avg_reward += evaluate_evals[-1]['real_reward']
             _count += 1
         return basic_avg_reward / rounds, evaluate_avg_reward / rounds
