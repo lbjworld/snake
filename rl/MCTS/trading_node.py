@@ -113,7 +113,7 @@ class TradingNode(BaseNode):
             return self._traverse_select()
         return self._agz_select()
 
-    def _agz_select(self, c_puct=0.9):
+    def _agz_select(self, c_puct=0.1):
         # refer to: PUCT algorithm
         total_visit_count = sum([e._visit_count for e in self._down_edges])
         vs = [
