@@ -43,7 +43,9 @@ def get_data_tushare(code):
     return get_all_hist_data(code, stock_basics)
 
 
-def data_loader(name, compression='gzip'):
+def data_loader(name, start=None, compression='gzip'):
+    if not start:
+        start = datetime(2016, 8, 29)
     df = None
     cache_dir = './tmp_data/'
     if not os.path.exists(cache_dir):
@@ -57,9 +59,9 @@ def data_loader(name, compression='gzip'):
             data_path = os.path.join(cache_dir, f)
             df = pd.read_pickle(data_path, compression=compression)
             break
-    if df is None:
+    if df is None or df.empty:
         # download from web
-        df = web.DataReader(name, 'yahoo', start=datetime(2012, 8, 29), end=datetime.now())
+        df = web.DataReader(name, 'yahoo', start=start, end=datetime.now())
         # df = get_data_tushare(name)
         # cache data
         now_date = datetime.now().date()

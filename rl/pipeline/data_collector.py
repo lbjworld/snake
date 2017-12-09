@@ -5,14 +5,14 @@ import logging
 from concurrent import futures
 import tushare as ts
 
-from envs.fast_trading_env import FastTradingEnv
+from envs.data_loader import data_loader
 
 logger = logging.getLogger(__name__)
 
 
 def _get_stock_data(code):
     # call env for loading data
-    FastTradingEnv(name=code, days=1)
+    data_loader(code)
     return True
 
 
