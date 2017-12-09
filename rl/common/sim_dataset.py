@@ -47,13 +47,13 @@ class SimDataSet(object):
     def _load_new_data(self, file_paths, size):
         _current_size = 0
         _current_files = [f for f, s in self._current_file_queue]
-        logger.debug('add new data files: {fs}'.format(fs=file_paths))
         for file_path in reversed(file_paths):
             if file_path in _current_files:
                 # ignore already processed file
                 continue
             r, s = self._load_single_data_file(file_path)
             if _current_size < size:
+                logger.debug('add new data file: {fs}'.format(fs=file_path))
                 self._data_pool.extend(r)
                 self._current_file_queue.appendleft((file_path, s))
                 _current_size += s
