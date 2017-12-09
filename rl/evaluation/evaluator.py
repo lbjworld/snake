@@ -37,7 +37,7 @@ class Evaluator(object):
 
     def evaluate(self, basic_model, evaluate_model, valid_stocks, rounds):
         # load both models
-	from policy.resnet_trading_model import ResnetTradingModel
+        from policy.resnet_trading_model import ResnetTradingModel
         bm = ResnetTradingModel(
             name=basic_model,
             model_dir=self._model_dir,
@@ -45,7 +45,7 @@ class Evaluator(object):
             load_model=True,
             specific_model_name=basic_model
         )
-	em = ResnetTradingModel(
+        em = ResnetTradingModel(
             name=evaluate_model,
             model_dir=self._model_dir,
             input_shape=self._input_shape,
@@ -58,9 +58,9 @@ class Evaluator(object):
         while _count < rounds:
             stock_name = np.random.choice(valid_stocks, 1)[0]
             try:
-            	env = FastTradingEnv(
-            	    name=stock_name, days=self._input_shape[0], use_adjust_close=False
-            	)
+                env = FastTradingEnv(
+                    name=stock_name, days=self._input_shape[0], use_adjust_close=False
+                )
             except Exception as e:
                 logger.exception('env init error, {e}'.format(e=e))
                 continue
