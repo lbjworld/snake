@@ -2,7 +2,8 @@
 from __future__ import unicode_literals
 
 import logging
-from gym_trading.envs import FastTradingEnv
+
+from envs.fast_trading_env import FastTradingEnv
 
 logger = logging.getLogger(__name__)
 
@@ -14,24 +15,24 @@ def sim_run_func(params):
 
     # get input parameters
     stock_name = params['stock_name']
-    episode_length = params['episode_length']
+    input_shape = params['input_shape']
     rounds_per_step = params['rounds_per_step']
     model_name = params['model_name']
     model_dir = params['model_dir']
-    model_feature_num = params['model_feature_num']
     sim_explore_rate = params['sim_explore_rate']
+    specific_model_name = params.get('specific_model_name')
     debug = params.get('debug', False)
     # create env
-    _env = FastTradingEnv(name=stock_name, days=episode_length)
+    _env = FastTradingEnv(name=stock_name, days=input_shape[0], use_adjust_close=False)
     _env.reset()
-    logger.debug('created env[{name}:{days}]'.format(name=stock_name, days=episode_length))
+    logger.debug('created env[{name}:{shape}]'.format(name=stock_name, shape=input_shape))
     # load model
     _model = ResnetTradingModel(
         name=model_name,
         model_dir=model_dir,
         load_model=True,
-        episode_days=episode_length,
-        feature_num=model_feature_num
+        input_shape=input_shape,
+        specific_model_name=specific_model_name,
     )
     logger.debug('loaded model[{d}/{name}]'.format(d=model_dir, name=model_name))
     _policy = ModelTradingPolicy(action_options=_env.action_options(), model=_model, debug=debug)

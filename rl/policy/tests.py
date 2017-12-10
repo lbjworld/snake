@@ -2,10 +2,9 @@
 from __future__ import unicode_literals
 
 import unittest
-from gym_trading.envs import FastTradingEnv
 
+from envs.fast_trading_env import FastTradingEnv
 from MCTS.mcts import MCTSBuilder
-from MCTS.trading_policy import RandomTradingPolicy
 from resnet_trading_model import ResnetTradingModel
 from model_policy import ModelTradingPolicy
 
@@ -19,8 +18,8 @@ class ModelPolicyTestCase(unittest.TestCase):
         self.assertTrue(self.env)
         resnet_model = ResnetTradingModel(
             name='test_resnet_model',
-            episode_days=self.days,
-            feature_num=5,  # open, high, low, close, volume
+            model_dir='test_models',
+            input_shape=(self.days, 5),  # open, high, low, close, volume
         )
         self.assertTrue(resnet_model)
         exploit_policy = ModelTradingPolicy(
@@ -29,7 +28,6 @@ class ModelPolicyTestCase(unittest.TestCase):
             debug=False
         )
         self.assertTrue(exploit_policy)
-        explore_policy = RandomTradingPolicy(action_options=self.env.action_options())
         # init env and save snapshot
         self.env.reset()
         snapshot_v0 = self.env.snapshot()
@@ -38,17 +36,16 @@ class ModelPolicyTestCase(unittest.TestCase):
         mcts_block.clean_up()
         # run batch and get q_table of next step
         root_node = mcts_block.run_batch(
-            policies=[exploit_policy, explore_policy],
-            probability_dist=[0.9, 0.1],
+            policy=exploit_policy,
             env_snapshot=snapshot_v0,
             batch_size=50
         )
-        root_node = root_node._children[0]
         self.assertTrue(root_node)
-        root_node.show_graph()
+        root_node.show_graph(name='model_policy_tree')
         q_table = root_node.q_table
-        print q_table
         self.assertTrue(q_table)
+        print q_table
+        print root_node.show_final_state()
 
 
 if __name__ == '__main__':

@@ -2,9 +2,11 @@
 from __future__ import unicode_literals
 
 import unittest
+import cProfile
 from ete3 import Tree
-from gym_trading.envs import FastTradingEnv
 
+from common.utils import Profiling
+from envs.fast_trading_env import FastTradingEnv
 from utils import klass_factory, fast_moving
 from trading_policy import RandomTradingPolicy, HoldTradingPolicy
 from trading_node import TradingNode
@@ -27,7 +29,7 @@ class RandomTradingPolicyTestCase(unittest.TestCase):
 class TradingNodeTestCase(unittest.TestCase):
     def setUp(self):
         self.stock_name = '000333.SZ'
-        self.days = 30
+        self.days = 10
         self.env = FastTradingEnv(name=self.stock_name, days=self.days)
         action_options = self.env.action_options()
         self.policy = RandomTradingPolicy(action_options=action_options)
@@ -46,7 +48,7 @@ class TradingNodeTestCase(unittest.TestCase):
         current_node = root_node
         while current_node:
             if debug:
-                print current_node._state, current_node._parent_action
+                print current_node._state
             current_node = current_node.step(self.policy)
         return root_node
 
@@ -58,8 +60,8 @@ class TradingNodeTestCase(unittest.TestCase):
         self.assertTrue(root_node)
         self.assertTrue(start_node)
         self.assertEqual(root_node, start_node)
-        self.assertEqual(root_node.get_rollout_count(), 1)
-        root_node.show_graph()
+        self.assertEqual(root_node.get_episode_count(), 1)
+        root_node.show_graph(name='basic')
 
     def test_multiple_episode(self):
         self.assertTrue(self.TradingEnvNode)
@@ -68,11 +70,9 @@ class TradingNodeTestCase(unittest.TestCase):
         for i in range(count):
             root_node = self.run_one_episode(root_node)
         self.assertTrue(root_node)
-        self.assertEqual(root_node.get_rollout_count(), count)
-        self.assertEqual(root_node.visit_count, 0)
-        top_visit_count = sum([c.visit_count for c in root_node._children if c])
-        self.assertEqual(top_visit_count, count)
-        root_node.show_graph()
+        self.assertEqual(root_node.get_episode_count(), count)
+        # TODO: test edges
+        root_node.show_graph(name='multi_episode')
 
 
 class MCTSBuilderTestCase(unittest.TestCase):
@@ -88,11 +88,11 @@ class MCTSBuilderTestCase(unittest.TestCase):
 
         snapshot_v0 = self.env.snapshot()
         block.clean_up()
-        root_node = block.run_batch([policy], env_snapshot=snapshot_v0, batch_size=10)
+        root_node = block.run_batch(policy, env_snapshot=snapshot_v0, batch_size=10)
         self.assertTrue(root_node)
-        root_node.show_graph()
+        root_node.show_graph(name='mcts_batch')
         self.assertTrue(root_node.q_table)
-        for action, t_reward in root_node.q_table.items():
+        for action, t_reward in enumerate(root_node.q_table):
             self.assertGreaterEqual(t_reward, 0.0)
         print root_node.q_table
 
@@ -105,9 +105,9 @@ class MCTSBuilderTestCase(unittest.TestCase):
         # first run
         snapshot_v0 = self.env.snapshot()
         block.clean_up()
-        root_node = block.run_once([hold_policy], env_snapshot=snapshot_v0)
+        root_node = block.run_once(hold_policy, env_snapshot=snapshot_v0)
         self.assertTrue(root_node)
-        root_node.show_graph()
+        root_node.show_graph(name='mcts_batch_from_snapshot')
 
         # generate another snapshot
         mid = self.days/2
@@ -119,9 +119,20 @@ class MCTSBuilderTestCase(unittest.TestCase):
         block.clean_up()
         self.env.reset()  # call reset to randomly initialize env
         # recover env to snapshot_mid
-        root_node = block.run_once([hold_policy], env_snapshot=snapshot_v1)
+        root_node = block.run_once(hold_policy, env_snapshot=snapshot_v1)
         self.assertTrue(root_node)
         root_node.show_graph()
+
+    def test_profile(self):
+        # buy and hold policy
+        policy = HoldTradingPolicy(action_options=self.env.action_options(), action_idx=1)
+        self.env.reset()
+
+        with Profiling(cProfile.Profile()):
+            snapshot_v0 = self.env.snapshot()
+            block = MCTSBuilder(self.env, debug=False)
+            block.clean_up()
+            block.run_batch(policy, env_snapshot=snapshot_v0, batch_size=100)
 
 
 if __name__ == '__main__':

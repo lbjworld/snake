@@ -10,12 +10,11 @@ from keras.layers import (
     Input,
     Activation,
     Dense,
-    Flatten
+    Flatten,
 )
 from keras.layers.convolutional import (
     Conv2D,
-    MaxPooling2D,
-    AveragePooling2D
+    MaxPooling2D
 )
 from keras.layers.merge import add
 from keras.layers.normalization import BatchNormalization
@@ -97,7 +96,8 @@ def _shortcut(input, residual):
     return add([shortcut, residual])
 
 
-def _residual_block(block_function, filters, repetitions, is_first_layer=False):
+def _residual_block(block_function, filters, repetitions,
+                    is_first_layer=False, kernel_regularizer=l2(1e-4)):
     """Builds a residual block with repeating bottleneck blocks.
     """
     def f(input):
@@ -106,13 +106,15 @@ def _residual_block(block_function, filters, repetitions, is_first_layer=False):
             if i == 0 and not is_first_layer:
                 init_strides = (2, 2)
             input = block_function(filters=filters, init_strides=init_strides,
-                                   is_first_block_of_first_layer=(is_first_layer and i == 0))(input)
+                                   is_first_block_of_first_layer=(is_first_layer and i == 0),
+                                   kernel_regularizer=kernel_regularizer)(input)
         return input
 
     return f
 
 
-def basic_block(filters, init_strides=(1, 1), is_first_block_of_first_layer=False):
+def basic_block(filters, init_strides=(1, 1),
+                is_first_block_of_first_layer=False, kernel_regularizer=l2(1e-4)):
     """Basic 3 X 3 convolution blocks for use on resnets with layers <= 34.
     Follows improved proposed scheme in http://arxiv.org/pdf/1603.05027v2.pdf
     """
@@ -124,18 +126,21 @@ def basic_block(filters, init_strides=(1, 1), is_first_block_of_first_layer=Fals
                            strides=init_strides,
                            padding="same",
                            kernel_initializer="he_normal",
-                           kernel_regularizer=l2(1e-4))(input)
+                           kernel_regularizer=kernel_regularizer)(input)
         else:
             conv1 = _bn_relu_conv(filters=filters, kernel_size=(3, 3),
-                                  strides=init_strides)(input)
+                                  strides=init_strides,
+                                  kernel_regularizer=kernel_regularizer)(input)
 
-        residual = _bn_relu_conv(filters=filters, kernel_size=(3, 3))(conv1)
+        residual = _bn_relu_conv(filters=filters, kernel_size=(3, 3),
+                                 kernel_regularizer=kernel_regularizer)(conv1)
         return _shortcut(input, residual)
 
     return f
 
 
-def bottleneck(filters, init_strides=(1, 1), is_first_block_of_first_layer=False):
+def bottleneck(filters, init_strides=(1, 1),
+               is_first_block_of_first_layer=False, kernel_regularizer=l2(1e-4)):
     """Bottleneck architecture for > 34 layer resnet.
     Follows improved proposed scheme in http://arxiv.org/pdf/1603.05027v2.pdf
     Returns:
@@ -149,13 +154,16 @@ def bottleneck(filters, init_strides=(1, 1), is_first_block_of_first_layer=False
                               strides=init_strides,
                               padding="same",
                               kernel_initializer="he_normal",
-                              kernel_regularizer=l2(1e-4))(input)
+                              kernel_regularizer=kernel_regularizer)(input)
         else:
             conv_1_1 = _bn_relu_conv(filters=filters, kernel_size=(1, 1),
-                                     strides=init_strides)(input)
+                                     strides=init_strides,
+                                     kernel_regularizer=kernel_regularizer)(input)
 
-        conv_3_3 = _bn_relu_conv(filters=filters, kernel_size=(3, 3))(conv_1_1)
-        residual = _bn_relu_conv(filters=filters * 4, kernel_size=(1, 1))(conv_3_3)
+        conv_3_3 = _bn_relu_conv(filters=filters, kernel_size=(3, 3),
+                                 kernel_regularizer=kernel_regularizer)(conv_1_1)
+        residual = _bn_relu_conv(filters=filters * 4, kernel_size=(1, 1),
+                                 kernel_regularizer=kernel_regularizer)(conv_3_3)
         return _shortcut(input, residual)
 
     return f
@@ -186,7 +194,7 @@ def _get_block(identifier):
 
 class ResnetBuilder(object):
     @staticmethod
-    def build(input_shape, num_outputs, block_fn, repetitions):
+    def build(input_shape, num_outputs, block_fn, repetitions, regularizer=None):
         """Builds a custom ResNet like architecture.
         Args:
             input_shape: The input shape in the form (nb_channels, nb_rows, nb_cols)
@@ -202,6 +210,10 @@ class ResnetBuilder(object):
         if len(input_shape) != 3:
             raise Exception("Input shape should be a tuple (nb_channels, nb_rows, nb_cols)")
 
+        if not regularizer:
+            # set default regularizer
+            regularizer = l2(1.e-4)
+
         # Permute dimension order if necessary
         if K.image_dim_ordering() == 'tf':
             input_shape = (input_shape[1], input_shape[2], input_shape[0])
@@ -210,29 +222,50 @@ class ResnetBuilder(object):
         block_fn = _get_block(block_fn)
 
         input = Input(shape=input_shape)
-        conv1 = _conv_bn_relu(filters=64, kernel_size=(7, 7), strides=(2, 2))(input)
-        pool1 = MaxPooling2D(pool_size=(3, 3), strides=(2, 2), padding="same")(conv1)
+        conv1 = _conv_bn_relu(
+            filters=64, kernel_size=(2, 2), strides=(1, 1), kernel_regularizer=regularizer
+        )(input)
+        pool1 = MaxPooling2D(pool_size=(2, 2), strides=(1, 1), padding="same")(conv1)
 
         block = pool1
         filters = 64
         for i, r in enumerate(repetitions):
             block = _residual_block(
-                block_fn, filters=filters, repetitions=r, is_first_layer=(i == 0)
+                block_fn, filters=filters, repetitions=r, is_first_layer=(i == 0),
+                kernel_regularizer=regularizer,
             )(block)
             filters *= 2
 
         # Last activation
         block = _bn_relu(block)
 
-        # Classifier block
-        block_shape = K.int_shape(block)
-        pool2 = AveragePooling2D(pool_size=(block_shape[ROW_AXIS], block_shape[COL_AXIS]),
-                                 strides=(1, 1))(block)
-        flatten1 = Flatten()(pool2)
-        dense = Dense(units=num_outputs, kernel_initializer="he_normal",
-                      activation="softmax")(flatten1)
+        # policy header
+        policy_header = _conv_bn_relu(
+            filters=2, kernel_size=(1, 1), strides=(1, 1), kernel_regularizer=regularizer
+        )(block)
+        policy_header = Flatten()(policy_header)
+        policy_header = Dense(
+            units=num_outputs, kernel_initializer="he_normal", kernel_regularizer=regularizer,
+            activation="softmax", name='policy_header',
+        )(policy_header)
 
-        model = Model(inputs=input, outputs=dense)
+        # value header
+        value_header = _conv_bn_relu(
+            filters=1, kernel_size=(1, 1), strides=(1, 1), kernel_regularizer=regularizer
+        )(block)
+        value_header = Flatten()(value_header)
+        value_header = Dense(
+            units=256, kernel_initializer="he_normal", kernel_regularizer=regularizer,
+            activation="linear"
+        )(value_header)
+        value_header = Activation("relu")(value_header)
+        value_header = Dense(
+            units=1, activation="linear", kernel_initializer="he_normal",
+            kernel_regularizer=regularizer,
+        )(value_header)
+        value_header = Activation("tanh", name='value_header')(value_header)
+
+        model = Model(inputs=input, outputs=[policy_header, value_header])
         return model
 
     @staticmethod

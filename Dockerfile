@@ -1,4 +1,4 @@
-FROM gw000/keras:2.0.6-py2-tf-cpu
+FROM gw000/keras:2.0.8-py2-tf-cpu
 
 COPY ./requirements.txt /
 # ADD ./jessie-sources.list /etc/apt/sources.list

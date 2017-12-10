@@ -2,12 +2,11 @@
 from __future__ import unicode_literals
 
 import unittest
-from gym_trading.envs import FastTradingEnv
+from envs.fast_trading_env import FastTradingEnv
 
 from policy.resnet_trading_model import ResnetTradingModel
 from policy.model_policy import ModelTradingPolicy
 
-from trajectory.sim_policy import SimPolicy
 from trajectory.sim_trajectory import SimTrajectory
 
 
@@ -21,8 +20,8 @@ class SimTrajectoryTestCase(unittest.TestCase):
         self.assertTrue(self.env)
         resnet_model = ResnetTradingModel(
             name='test_resnet_model',
-            episode_days=self.days,
-            feature_num=5,  # open, high, low, close, volume
+            model_dir='./test_models',
+            input_shape=(self.days, 5),  # open, high, low, close, volume
         )
         self.assertTrue(resnet_model)
         model_policy = ModelTradingPolicy(
@@ -35,9 +34,10 @@ class SimTrajectoryTestCase(unittest.TestCase):
         # start trajectory
         t = SimTrajectory(
             env=self.env,
-            model_policy=model_policy
+            model_policy=model_policy,
+            debug=False,
         )
-        t.sim_run(rounds_per_step=50)
+        t.sim_run(rounds_per_step=23)
         print t.history
         self.assertEqual(len(t.history), self.days)
 
